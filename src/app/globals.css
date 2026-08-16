@@ -178,3 +178,51 @@ body {
     transition: none;
   }
 }
+
+@keyframes loginRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loginGlow {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.login-rise {
+  animation: loginRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.login-rise-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.login-rise-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.login-rise-delay-3 {
+  animation-delay: 0.24s;
+}
+
+.login-glow {
+  animation: loginGlow 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-rise,
+  .login-glow {
+    animation: none;
+  }
+}

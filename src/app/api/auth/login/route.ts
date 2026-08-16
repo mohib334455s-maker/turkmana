@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateToken, verifyPassword } from '@/lib/auth';
+import { isDemoAuth } from '@/lib/demo-auth';
 
 const DEMO_USERS = [
   {
@@ -79,11 +80,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Demo mode: skip Postgres entirely (local/dev without DB)
-    if (process.env.DEMO_AUTH === 'true') {
-      const demo = DEMO_USERS.find((u) => u.email === email && u.password === password);
-      if (demo) {
-        return loginSuccessResponse(demo);
+    const demoUser = DEMO_USERS.find((u) => u.email === email && u.password === password);
+
+    if (isDemoAuth()) {
+      if (demoUser) {
+        return loginSuccessResponse(demoUser);
       }
       return NextResponse.json(
         { error: 'ایمیل یا رمز عبور نادرست است' },
@@ -124,9 +125,12 @@ export async function POST(request: NextRequest) {
       });
     } catch (dbError) {
       console.error('Database login failed:', dbError);
+      if (demoUser) {
+        return loginSuccessResponse(demoUser);
+      }
       return NextResponse.json(
-        { error: 'خطا در اتصال به دیتابیس. DEMO_AUTH را فعال کنید یا Postgres را راه‌اندازی کنید.' },
-        { status: 503 }
+        { error: 'ایمیل یا رمز عبور نادرست است' },
+        { status: 401 }
       );
     }
   } catch (error) {

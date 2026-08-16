@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
+import { isDemoAuth } from '@/lib/demo-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'توکن نامعتبر' }, { status: 401 });
     }
 
-    if (process.env.DEMO_AUTH === 'true') {
+    if (isDemoAuth()) {
       return NextResponse.json({
         user: {
           id: payload.userId,

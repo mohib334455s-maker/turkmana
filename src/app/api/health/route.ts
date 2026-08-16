@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
+import { isDemoAuth } from "@/lib/demo-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (process.env.DEMO_AUTH === "true" || !process.env.DATABASE_URL) {
+  if (isDemoAuth()) {
     return Response.json({ ok: true, mode: "demo" });
   }
 

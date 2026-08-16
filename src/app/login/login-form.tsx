@@ -8,31 +8,7 @@ import { LocaleEffects } from '@/components/layout/locale-effects';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
 import { useAuthStore } from '@/lib/auth-store';
 
-const DEMO_ACCOUNTS = [
-  {
-    id: 'admin',
-    email: 'admin@example.com',
-    password: 'admin123',
-    labelKey: 'loginDemoAdmin' as const,
-    companyKey: 'companyBoth' as const,
-  },
-  {
-    id: 'arya',
-    email: 'arya@example.com',
-    password: 'arya123',
-    labelKey: 'loginDemoArya' as const,
-    companyKey: 'companyArya' as const,
-  },
-  {
-    id: 'turkmen',
-    email: 'turkmen@example.com',
-    password: 'turkmen123',
-    labelKey: 'loginDemoTurkmen' as const,
-    companyKey: 'companyTurkmen' as const,
-  },
-] as const;
-
-export function LoginForm({ demoAuth }: { demoAuth: boolean }) {
+export function LoginForm() {
   const { t, locale, dir } = useI18n();
   const toggleLocale = useUiStore((s) => s.toggleLocale);
   const setSession = useAuthStore((s) => s.setSession);
@@ -41,14 +17,6 @@ export function LoginForm({ demoAuth }: { demoAuth: boolean }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
-
-  const fillDemo = (account: (typeof DEMO_ACCOUNTS)[number]) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setSelectedDemo(account.id);
-    setError('');
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,10 +118,7 @@ export function LoginForm({ demoAuth }: { demoAuth: boolean }) {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setSelectedDemo(null);
-                  }}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
                   dir="ltr"
@@ -171,10 +136,7 @@ export function LoginForm({ demoAuth }: { demoAuth: boolean }) {
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setSelectedDemo(null);
-                    }}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
                     dir="ltr"
@@ -203,41 +165,6 @@ export function LoginForm({ demoAuth }: { demoAuth: boolean }) {
                 )}
               </Button>
             </form>
-
-            {demoAuth ? (
-              <div className="mt-6 border-t border-slate-200 pt-4">
-                <p className="mb-2 text-xs font-medium text-slate-500">{t('loginDemoTitle')}</p>
-                <div className="space-y-2">
-                  {DEMO_ACCOUNTS.map((account) => {
-                    const active = selectedDemo === account.id;
-                    return (
-                      <button
-                        key={account.id}
-                        type="button"
-                        onClick={() => fillDemo(account)}
-                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-start ${
-                          active
-                            ? 'border-teal-400 bg-teal-50'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
-                        }`}
-                      >
-                        <span>
-                          <span className="block text-sm font-medium text-slate-800">
-                            {t(account.labelKey)}
-                          </span>
-                          <span className="block text-[11px] text-slate-500" dir="ltr">
-                            {account.email}
-                          </span>
-                        </span>
-                        <span className="text-[11px] font-medium text-slate-500">
-                          {t(account.companyKey)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       </main>

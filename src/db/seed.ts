@@ -7,12 +7,12 @@ async function seed() {
 
   try {
     // Create default admin user
-    const hashedPassword = await hashPassword('admin123');
+    const hashedPassword = await hashPassword('aria1234');
     
     await db.insert(users).values({
-      email: 'admin@example.com',
+      email: 'turkman',
       password: hashedPassword,
-      fullName: 'مدیر سیستم',
+      fullName: 'مدیر ترکمن',
       role: 'admin',
       isActive: true,
     }).onConflictDoNothing();

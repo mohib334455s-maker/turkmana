@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Eye, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,13 +17,20 @@ import {
 import { PageHeader } from '@/components/shared/page-header';
 import { ExportButtons } from '@/components/shared/export-buttons';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { exchangeHouses } from '@/lib/demo-data';
+import { useOpsStore, type OpsRow } from '@/lib/ops-store';
+import type { CompanyKey, ExchangeHouse } from '@/lib/demo-data';
 import { balanceClass, formatCurrency } from '@/lib/utils';
+
+const EMPTY: OpsRow[] = [];
 
 export default function ExchangePage() {
   const { company } = useCompanyStore();
-  const rows = exchangeHouses.filter((e) => matchesCompany(e.company, company));
+  const items = useOpsStore((s) => (s.lists.exchangeHouses ?? EMPTY) as unknown as ExchangeHouse[]);
+  const addToList = useOpsStore((s) => s.addToList);
+  const [createOpen, setCreateOpen] = useState(false);
+  const rows = items.filter((e) => matchesCompany(e.company, company));
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -45,7 +53,7 @@ export default function ExchangePage() {
               rows={rows}
             />
             <CompanySwitcher />
-            <Button>
+            <Button onClick={() => setCreateOpen(true)}>
               <Plus className="ml-2 h-4 w-4" />
               صرافی جدید
             </Button>
@@ -158,6 +166,37 @@ export default function ExchangePage() {
           </Table>
         </CardContent>
       </Card>
+
+      <CompactFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="صرافی جدید"
+        fields={[
+          { key: 'name', label: 'نام صراف', required: true },
+          { key: 'currency', label: 'ارز', placeholder: 'USD / AFN' },
+          {
+            key: 'company',
+            label: 'شرکت',
+            type: 'select',
+            options: [
+              { value: 'arya', label: 'آریا' },
+              { value: 'turkmen', label: 'ترکمن' },
+            ],
+          },
+        ]}
+        submitLabel="ثبت"
+        onSubmit={(v) => {
+          addToList('exchangeHouses', {
+            name: v.name.trim(),
+            currency: v.currency || 'USD / AFN',
+            totalIn: 0,
+            totalOut: 0,
+            balance: 0,
+            fxPnl: 0,
+            company: (v.company as CompanyKey) || 'arya',
+          });
+        }}
+      />
     </div>
   );
 }

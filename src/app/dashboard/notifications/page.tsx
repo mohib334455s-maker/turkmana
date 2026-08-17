@@ -22,41 +22,7 @@ type Note = {
   read: boolean;
 };
 
-const seed: Note[] = [
-  {
-    id: 1,
-    type: 'warning',
-    titleFa: 'استرداد کالا برای فروش مجدد',
-    titleEn: 'Goods takeback for resale',
-    bodyFa: 'درخواست استرداد ۱۰۰ تن دیزل از احمد تجارتی ثبت شده است.',
-    bodyEn: 'Takeback of 100t diesel from Ahmad Trading is registered.',
-    timeFa: 'امروز ۰۸:۲۰',
-    timeEn: 'Today 08:20',
-    read: false,
-  },
-  {
-    id: 2,
-    type: 'danger',
-    titleFa: 'بیلانس منفی مشتری',
-    titleEn: 'Negative customer balance',
-    bodyFa: 'بیلانس نقدی احمد تجارتی منفی است و نیاز به پیگیری دارد.',
-    bodyEn: 'Ahmad Trading cash balance is negative and needs follow-up.',
-    timeFa: 'دیروز ۱۶:۴۰',
-    timeEn: 'Yesterday 16:40',
-    read: false,
-  },
-  {
-    id: 3,
-    type: 'info',
-    titleFa: 'وارده جنسی جدید',
-    titleEn: 'New goods arrival',
-    bodyFa: 'وارده GA-002 از Caspian Fuels در انتظار بررسی است.',
-    bodyEn: 'Arrival GA-002 from Caspian Fuels is pending review.',
-    timeFa: '۱۴۰۴/۰۵/۲۲',
-    timeEn: '2025-08-13',
-    read: true,
-  },
-];
+const seed: Note[] = [];
 
 export default function NotificationsPage() {
   const { t, locale } = useI18n();

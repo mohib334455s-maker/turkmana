@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Eye, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,15 +18,35 @@ import { PageHeader } from '@/components/shared/page-header';
 import { ExportButtons } from '@/components/shared/export-buttons';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { TableEmpty } from '@/components/shared/table-empty';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { inventorySkus, physicalWarehouses, products, warehouses } from '@/lib/demo-data';
+import { inventorySkus, products, warehouses } from '@/lib/demo-data';
+import { useOpsStore, type OpsRow } from '@/lib/ops-store';
+import type { CompanyKey } from '@/lib/demo-data';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { BiLabel } from '@/components/shared/bi-label';
+import { emptyInventoryStock } from '@/lib/demo-data';
+
+const EMPTY: OpsRow[] = [];
 
 export default function WarehousesPage() {
   const { company } = useCompanyStore();
+  const storedPhysical = useOpsStore(
+    (s) => s.lists.physicalWarehouses ?? EMPTY
+  );
+  const addToList = useOpsStore((s) => s.addToList);
+  const [createOpen, setCreateOpen] = useState(false);
   const legacyRows = warehouses.filter((w) => matchesCompany(w.company, company));
-  const physicalRows = physicalWarehouses.filter((w) => matchesCompany(w.company, company));
+  type PhysicalWh = {
+    id: number;
+    name: string;
+    location: string;
+    company: CompanyKey;
+    stock: Record<string, number>;
+  };
+  const physicalRows = (storedPhysical as unknown as PhysicalWh[]).filter((w) =>
+    matchesCompany(w.company, company)
+  );
   const warehouseIds = new Set(warehouses.map((w) => w.id));
 
   const general = legacyRows.filter((w) => w.type !== 'ترانزیت' && w.type !== 'خارجی');
@@ -69,7 +90,7 @@ export default function WarehousesPage() {
               }))}
             />
             <CompanySwitcher />
-            <Button>
+            <Button onClick={() => setCreateOpen(true)}>
               <Plus className="ml-2 h-4 w-4" />
               گدام جدید
             </Button>
@@ -218,6 +239,34 @@ export default function WarehousesPage() {
           </div>
         </CardContent>
       </Card>
+
+      <CompactFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="گدام جدید"
+        fields={[
+          { key: 'name', label: 'نام گدام', required: true },
+          { key: 'location', label: 'محل', required: true },
+          {
+            key: 'company',
+            label: 'شرکت',
+            type: 'select',
+            options: [
+              { value: 'arya', label: 'آریا' },
+              { value: 'turkmen', label: 'ترکمن' },
+            ],
+          },
+        ]}
+        submitLabel="ثبت"
+        onSubmit={(v) => {
+          addToList('physicalWarehouses', {
+            name: v.name.trim(),
+            location: v.location.trim(),
+            company: (v.company as CompanyKey) || 'arya',
+            stock: emptyInventoryStock(),
+          });
+        }}
+      />
     </div>
   );
 }

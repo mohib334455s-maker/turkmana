@@ -27,20 +27,9 @@ import { formatCurrency } from '@/lib/utils';
 
 const opsModules = navModules.filter((m) => m.key !== 'dashboard');
 
-const marketPrices = [
-  { code: 'DIESEL', name: 'دیزل', buy: 1280, sell: 1420, unit: 'تن' },
-  { code: 'PETROL', name: 'پطرول', buy: 1180, sell: 1310, unit: 'تن' },
-  { code: 'PETROL-92', name: 'پطرول ۹۲', buy: 1210, sell: 1345, unit: 'تن' },
-  { code: 'GAS', name: 'گاز', buy: 890, sell: 980, unit: 'تن' },
-  { code: 'LPG', name: 'LPG', buy: 760, sell: 845, unit: 'تن' },
-];
+const marketPrices: Array<{ code: string; name: string; buy: number; sell: number; unit: string }> = [];
 
-const monthBars = [
-  { name: 'هفته ۱', purchase: 18, sales: 24 },
-  { name: 'هفته ۲', purchase: 22, sales: 28 },
-  { name: 'هفته ۳', purchase: 16, sales: 32 },
-  { name: 'هفته ۴', purchase: 20, sales: 26 },
-];
+const monthBars: Array<{ name: string; purchase: number; sales: number }> = [];
 
 export default function DashboardPage() {
   const { company } = useCompanyStore();
@@ -49,8 +38,8 @@ export default function DashboardPage() {
   const kpiCards = [
     {
       title: 'مشتریان فعال',
-      value: '128',
-      change: '+12.8%',
+      value: '0',
+      change: '۰',
       up: true,
       icon: Users,
       accent: 'bg-gradient-to-br from-violet-600 via-violet-700 to-violet-950 border-violet-900/35',
@@ -59,7 +48,7 @@ export default function DashboardPage() {
     {
       title: 'ارزش کل موجودی',
       value: formatCurrency(fin.inventoryValue),
-      change: '+8.4%',
+      change: '۰',
       up: true,
       icon: Warehouse,
       accent: 'bg-gradient-to-br from-teal-600 via-teal-700 to-teal-950 border-teal-900/35',
@@ -68,7 +57,7 @@ export default function DashboardPage() {
     {
       title: 'بیلانس مشتریان',
       value: formatCurrency(fin.customerBalance),
-      change: '+6.1%',
+      change: '۰',
       up: true,
       icon: Handshake,
       accent: 'bg-gradient-to-br from-sky-600 via-sky-700 to-sky-950 border-sky-900/35',
@@ -77,7 +66,7 @@ export default function DashboardPage() {
     {
       title: 'تعداد معاملات',
       value: String(fin.txnCount),
-      change: '+15.2%',
+      change: '۰',
       up: true,
       icon: Layers,
       accent: 'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-950 border-amber-900/35',
@@ -86,8 +75,8 @@ export default function DashboardPage() {
     {
       title: 'مفاد و ضرر',
       value: formatCurrency(fin.profitLoss),
-      change: '-2.1%',
-      up: false,
+      change: '۰',
+      up: true,
       icon: Scale,
       accent: 'bg-gradient-to-br from-rose-600 via-rose-700 to-rose-950 border-rose-900/35',
       indicator: 'bg-rose-600',

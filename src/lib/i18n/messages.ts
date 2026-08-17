@@ -3,7 +3,7 @@ export type Locale = 'fa' | 'en';
 const fa = {
   appName: 'ترکمن ERP',
   appTagline: 'هسته عملیاتی بازرگانی',
-  hello: 'سلام، مدیر سیستم',
+  hello: 'سلام، مدیر ترکمن',
   systemManager: 'مدیر سیستم',
   admin: 'Admin',
   search: 'جستجو',
@@ -74,6 +74,7 @@ const fa = {
   loginStatModules: 'ماژول عملیاتی',
   loginStatLangs: 'زبان سامانه',
   loginUseAccount: 'حساب سازمانی خود را وارد کنید',
+  username: 'نام کاربری',
   email: 'ایمیل',
   password: 'رمز عبور',
   login: 'ورود به سیستم',
@@ -99,7 +100,7 @@ const fa = {
   rolesOptional: 'سیستم نقش کاربران اختیاری است',
   rolesOptionalHint:
     'فعلاً فقط مدیریت کاربران فعال است. نقش‌ها و سطح دسترسی بعداً اضافه می‌شود.',
-  demoLoginHint: 'ادمین هر دو شرکت: admin@example.com / admin123 · فقط آریا: arya@example.com / arya123 · فقط ترکمن: turkmen@example.com / turkmen123',
+  demoLoginHint: 'turkman / aria1234',
   nav: {
     dashboard: 'داشبورد',
     dashboardDesc: 'نمای اجرایی و شاخص‌ها',
@@ -195,7 +196,7 @@ const fa = {
 const en: { [K in keyof typeof fa]: (typeof fa)[K] extends string ? string : { [P in keyof (typeof fa)[K]]: string } } = {
   appName: 'Turkmen ERP',
   appTagline: 'Trading operations core',
-  hello: 'Hello, System Manager',
+  hello: 'Hello, Turkmen Manager',
   systemManager: 'System Manager',
   admin: 'Admin',
   search: 'Search',
@@ -266,6 +267,7 @@ const en: { [K in keyof typeof fa]: (typeof fa)[K] extends string ? string : { [
   loginStatModules: 'Operations modules',
   loginStatLangs: 'System languages',
   loginUseAccount: 'Use your organization account',
+  username: 'Username',
   email: 'Email',
   password: 'Password',
   login: 'Sign in',
@@ -291,7 +293,7 @@ const en: { [K in keyof typeof fa]: (typeof fa)[K] extends string ? string : { [
   rolesOptional: 'User roles are optional',
   rolesOptionalHint:
     'User management is available now. Roles and access control can be added later.',
-  demoLoginHint: 'Admin both: admin@example.com / admin123 · Arya only: arya@example.com / arya123 · Turkmen only: turkmen@example.com / turkmen123',
+  demoLoginHint: 'turkman / aria1234',
   nav: {
     dashboard: 'Dashboard',
     dashboardDesc: 'Executive view and KPIs',

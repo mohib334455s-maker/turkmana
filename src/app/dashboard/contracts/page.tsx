@@ -20,13 +20,48 @@ import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { RecordActions } from '@/components/shared/record-actions';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { TableEmpty } from '@/components/shared/table-empty';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { contracts as initialContracts } from '@/lib/demo-data';
-import { formatCurrency, formatNumber } from '@/lib/utils';
+import { emptyContract, useOpsStore } from '@/lib/ops-store';
+import { formatNumber } from '@/lib/utils';
+import type { CompanyKey } from '@/lib/demo-data';
+
+const contractFields = [
+  { key: 'number', label: 'شماره قرارداد', required: true, dir: 'ltr' as const, placeholder: 'CNT-1405-01' },
+  { key: 'supplierName', label: 'تأمین‌کننده', required: true, placeholder: 'نام شرکت طرف' },
+  {
+    key: 'product',
+    label: 'نوع کالا',
+    type: 'select' as const,
+    options: [
+      { value: 'دیزل', label: 'دیزل' },
+      { value: 'پطرول', label: 'پطرول' },
+      { value: 'پطرول ۹۲', label: 'پطرول ۹۲' },
+      { value: 'گاز', label: 'گاز' },
+      { value: 'LPG', label: 'LPG' },
+    ],
+  },
+  { key: 'totalQty', label: 'مقدار (تن)', type: 'number' as const, required: true },
+  { key: 'pricePerUnit', label: 'قیمت واحد', type: 'number' as const },
+  { key: 'location', label: 'محل', placeholder: 'هرات / آقینه' },
+  {
+    key: 'company',
+    label: 'شرکت',
+    type: 'select' as const,
+    options: [
+      { value: 'arya', label: 'آریا' },
+      { value: 'turkmen', label: 'ترکمن' },
+    ],
+  },
+];
 
 export default function ContractsPage() {
   const { company } = useCompanyStore();
-  const [items, setItems] = useState(initialContracts);
+  const items = useOpsStore((s) => s.contracts);
+  const addContract = useOpsStore((s) => s.addContract);
+  const updateContract = useOpsStore((s) => s.updateContract);
+  const removeContract = useOpsStore((s) => s.removeContract);
+  const [createOpen, setCreateOpen] = useState(false);
   const rows = items.filter((c) => matchesCompany(c.company, company));
 
   return (
@@ -56,12 +91,10 @@ export default function ContractsPage() {
               rows={rows}
             />
             <CompanySwitcher />
-            <Link href="/dashboard/contracts/new">
-              <Button>
-                <Plus className="ml-2 h-4 w-4" />
-                قرارداد جدید
-              </Button>
-            </Link>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="ml-2 h-4 w-4" />
+              قرارداد جدید
+            </Button>
           </>
         }
       />
@@ -178,23 +211,16 @@ export default function ContractsPage() {
                         { key: 'sellable', label: 'قابل فروش' },
                       ]}
                       onSave={(next) => {
-                        setItems((prev) =>
-                          prev.map((r) =>
-                            r.id === c.id
-                              ? {
-                                  ...r,
-                                  number: String(next.number ?? r.number),
-                                  supplierName: String(next.supplierName ?? r.supplierName),
-                                  product: String(next.product ?? r.product),
-                                  totalQty: Number(next.totalQty ?? r.totalQty),
-                                  location: String(next.location ?? r.location),
-                                  sellable: Number(next.sellable ?? r.sellable),
-                                }
-                              : r
-                          )
-                        );
+                        updateContract(c.id, {
+                          number: String(next.number ?? c.number),
+                          supplierName: String(next.supplierName ?? c.supplierName),
+                          product: String(next.product ?? c.product),
+                          totalQty: Number(next.totalQty ?? c.totalQty),
+                          location: String(next.location ?? c.location),
+                          sellable: Number(next.sellable ?? c.sellable),
+                        });
                       }}
-                      onDelete={() => setItems((prev) => prev.filter((r) => r.id !== c.id))}
+                      onDelete={() => removeContract(c.id)}
                     />
                   </TableCell>
                 </TableRow>
@@ -252,23 +278,16 @@ export default function ContractsPage() {
                           { key: 'sellable', label: 'قابل فروش' },
                         ]}
                         onSave={(next) => {
-                          setItems((prev) =>
-                            prev.map((r) =>
-                              r.id === c.id
-                                ? {
-                                    ...r,
-                                    number: String(next.number ?? r.number),
-                                    supplierName: String(next.supplierName ?? r.supplierName),
-                                    product: String(next.product ?? r.product),
-                                    totalQty: Number(next.totalQty ?? r.totalQty),
-                                    location: String(next.location ?? r.location),
-                                    sellable: Number(next.sellable ?? r.sellable),
-                                  }
-                                : r
-                            )
-                          );
+                          updateContract(c.id, {
+                            number: String(next.number ?? c.number),
+                            supplierName: String(next.supplierName ?? c.supplierName),
+                            product: String(next.product ?? c.product),
+                            totalQty: Number(next.totalQty ?? c.totalQty),
+                            location: String(next.location ?? c.location),
+                            sellable: Number(next.sellable ?? c.sellable),
+                          });
                         }}
-                        onDelete={() => setItems((prev) => prev.filter((r) => r.id !== c.id))}
+                        onDelete={() => removeContract(c.id)}
                       />
                     }
                   />
@@ -279,9 +298,28 @@ export default function ContractsPage() {
         </CardContent>
       </Card>
 
-      <p className="text-xs text-slate-500">
-        قیمت نمونه: {rows[0] ? formatCurrency(rows[0].pricePerUnit) + '/تن' : '-'}
-      </p>
+      <CompactFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="قرارداد جدید"
+        description="فرم کوتاه ثبت قرارداد — بعد از ذخیره در جدول ظاهر می‌شود"
+        fields={contractFields}
+        submitLabel="ثبت قرارداد"
+        onSubmit={(v) => {
+          const qty = Number(v.totalQty || 0);
+          addContract({
+            ...emptyContract((v.company as CompanyKey) || 'arya'),
+            number: v.number.trim(),
+            supplierName: v.supplierName.trim(),
+            product: v.product,
+            totalQty: qty,
+            sellable: qty,
+            pricePerUnit: Number(v.pricePerUnit || 0),
+            location: v.location.trim(),
+            company: (v.company as CompanyKey) || 'arya',
+          });
+        }}
+      />
     </div>
   );
 }

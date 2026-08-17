@@ -11,6 +11,7 @@ import { ExportButtons } from '@/components/shared/export-buttons';
 import { goodsArrivals } from '@/lib/demo-data';
 import {
   calculateProfitLoss,
+  emptyExpenses,
   sumDomesticExpenses,
   sumForeignExpenses,
 } from '@/lib/calculations/profit-loss';
@@ -35,8 +36,9 @@ export default function GoodsArrivalDetailPage({
     );
   }
 
-  const foreign = sumForeignExpenses(arrival.expenses);
-  const domestic = sumDomesticExpenses(arrival.expenses);
+  const expenses = { ...emptyExpenses, ...(arrival.expenses ?? {}) };
+  const foreign = sumForeignExpenses(expenses);
+  const domestic = sumDomesticExpenses(expenses);
   const impact = calculateProfitLoss({
     product: arrival.contractNumber,
     purchaseQty: arrival.netWeight,
@@ -46,38 +48,38 @@ export default function GoodsArrivalDetailPage({
     salesAmount: 0,
     remainingQty: arrival.netWeight,
     marketRate: arrival.pricePerUnit * 1.1,
-    expenses: arrival.expenses,
+    expenses,
   });
 
   const foreignItems: [string, number][] = [
-    ['ترانسپورت خارجی', arrival.expenses.transport],
-    ['کمیسیون بانکی', arrival.expenses.bankCommission],
-    ['راه‌آهن', arrival.expenses.railway],
-    ['کرایه موتر', arrival.expenses.truckRent],
-    ['ذخیره', arrival.expenses.storage],
-    ['جریمه', arrival.expenses.fine],
-    ['بارگیری', arrival.expenses.loading],
-    ['گمرک خارجی', arrival.expenses.foreignCustoms],
-    ['سایر', arrival.expenses.otherForeign],
+    ['ترانسپورت خارجی', expenses.transport],
+    ['کمیسیون بانکی', expenses.bankCommission],
+    ['راه‌آهن', expenses.railway],
+    ['کرایه موتر', expenses.truckRent],
+    ['ذخیره', expenses.storage],
+    ['جریمه', expenses.fine],
+    ['بارگیری', expenses.loading],
+    ['گمرک خارجی', expenses.foreignCustoms],
+    ['سایر', expenses.otherForeign],
   ];
 
   const domesticItems: [string, number][] = [
-    ['گمرک', arrival.expenses.customs],
-    ['تلکس', arrival.expenses.telex],
-    ['راه‌آهن', arrival.expenses.railwayLocal],
-    ['خدمات مواد نفتی', arrival.expenses.oilServices],
-    ['لابراتوار', arrival.expenses.lab],
-    ['جریمه توقف', arrival.expenses.demurrage],
-    ['خدمات بندری', arrival.expenses.port],
-    ['ترانسپورت', arrival.expenses.transportLocal],
-    ['ذخیره', arrival.expenses.storageLocal],
-    ['کمیسیون لیتری', arrival.expenses.literCommission],
-    ['حق‌الوزن', arrival.expenses.weighing],
-    ['هزینه انتقال', arrival.expenses.transfer],
-    ['مصارف دولتی', arrival.expenses.government],
-    ['مصارف قرارداد', arrival.expenses.contractCost],
-    ['مصارف دفتر', arrival.expenses.office],
-    ['سایر', arrival.expenses.otherLocal],
+    ['گمرک', expenses.customs],
+    ['تلکس', expenses.telex],
+    ['راه‌آهن', expenses.railwayLocal],
+    ['خدمات مواد نفتی', expenses.oilServices],
+    ['لابراتوار', expenses.lab],
+    ['جریمه توقف', expenses.demurrage],
+    ['خدمات بندری', expenses.port],
+    ['ترانسپورت', expenses.transportLocal],
+    ['ذخیره', expenses.storageLocal],
+    ['کمیسیون لیتری', expenses.literCommission],
+    ['حق‌الوزن', expenses.weighing],
+    ['هزینه انتقال', expenses.transfer],
+    ['مصارف دولتی', expenses.government],
+    ['مصارف قرارداد', expenses.contractCost],
+    ['مصارف دفتر', expenses.office],
+    ['سایر', expenses.otherLocal],
   ];
 
   return (
@@ -176,10 +178,10 @@ export default function GoodsArrivalDetailPage({
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ['حمل / ترانسپورت', arrival.expenses.transport + arrival.expenses.transportLocal],
-            ['گمرک', arrival.expenses.customs + arrival.expenses.foreignCustoms],
-            ['خدمات', arrival.expenses.oilServices + arrival.expenses.port + arrival.expenses.lab],
-            ['کمیسیون‌ها', arrival.expenses.bankCommission + arrival.expenses.literCommission],
+            ['حمل / ترانسپورت', expenses.transport + expenses.transportLocal],
+            ['گمرک', expenses.customs + expenses.foreignCustoms],
+            ['خدمات', expenses.oilServices + expenses.port + expenses.lab],
+            ['کمیسیون‌ها', expenses.bankCommission + expenses.literCommission],
           ].map(([label, value]) => (
             <div key={String(label)} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
               <p className="text-xs text-slate-500">{label}</p>

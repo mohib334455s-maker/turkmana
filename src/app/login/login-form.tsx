@@ -12,7 +12,7 @@ export function LoginForm() {
   const { t, locale, dir } = useI18n();
   const toggleLocale = useUiStore((s) => s.toggleLocale);
   const setSession = useAuthStore((s) => s.setSession);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ export function LoginForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: username, username, password }),
       });
 
       const data = await response.json();
@@ -111,14 +111,14 @@ export function LoginForm() {
               ) : null}
 
               <div className="space-y-1.5">
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-                  {t('email')}
+                <label htmlFor="username" className="block text-sm font-medium text-slate-700">
+                  {t('username')}
                 </label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                   disabled={loading}
                   dir="ltr"

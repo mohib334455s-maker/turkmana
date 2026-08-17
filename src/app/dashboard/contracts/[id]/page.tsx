@@ -16,9 +16,12 @@ import {
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
-import { contracts, foreignArrivals, goodsArrivals, parties } from '@/lib/demo-data';
+import { useOpsStore, type OpsRow } from '@/lib/ops-store';
+import type { ForeignArrivalRecord, GoodsArrivalRecord, PartyRecord } from '@/lib/demo-data';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { ExportButtons } from '@/components/shared/export-buttons';
+
+const EMPTY: OpsRow[] = [];
 
 export default function ContractDetailPage({
   params,
@@ -27,12 +30,18 @@ export default function ContractDetailPage({
 }) {
   const { id } = use(params);
   const contractId = Number(id);
-  const contract = contracts.find((c) => c.id === contractId);
-  const contractParties = parties.filter((p) => p.contractId === contractId);
-  const arrivals = foreignArrivals.filter(
-    (a) => a.contractNumber === contract?.number
+  const contract = useOpsStore((s) => s.contracts.find((c) => c.id === contractId));
+  const contractParties = useOpsStore(
+    (s) => ((s.lists.parties ?? EMPTY) as unknown as PartyRecord[]).filter((p) => p.contractId === contractId)
   );
-  const goods = goodsArrivals.filter((g) => g.contractId === contractId);
+  const arrivals = useOpsStore((s) =>
+    ((s.lists.foreignArrivals ?? EMPTY) as unknown as ForeignArrivalRecord[]).filter(
+      (a) => a.contractNumber === contract?.number
+    )
+  );
+  const goods = useOpsStore((s) =>
+    ((s.lists.goodsArrivals ?? EMPTY) as unknown as GoodsArrivalRecord[]).filter((g) => g.contractId === contractId)
+  );
 
   if (!contract) {
     return (

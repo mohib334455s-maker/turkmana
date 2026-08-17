@@ -21,8 +21,10 @@ import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { RecordActions } from '@/components/shared/record-actions';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { TableEmpty } from '@/components/shared/table-empty';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { journalEntries as initialEntries } from '@/lib/demo-data';
+import { useOpsStore, type OpsRow } from '@/lib/ops-store';
+import type { CompanyKey, JournalEntry } from '@/lib/demo-data';
 import { formatCurrency } from '@/lib/utils';
 import { BiLabel } from '@/components/shared/bi-label';
 
@@ -44,11 +46,14 @@ const statusLabel: Record<string, string> = {
   pending: 'در انتظار',
 };
 
-type JournalRow = (typeof initialEntries)[number];
+const EMPTY: OpsRow[] = [];
 
 export default function JournalPage() {
   const { company } = useCompanyStore();
-  const [items, setItems] = useState<JournalRow[]>([...initialEntries]);
+  const items = useOpsStore((s) => (s.lists.journal ?? EMPTY) as unknown as JournalEntry[]);
+  const addToList = useOpsStore((s) => s.addToList);
+  const setList = useOpsStore((s) => s.setList);
+  const [createOpen, setCreateOpen] = useState(false);
   const rows = items.filter((e) => matchesCompany(e.company, company));
   const receipts = rows
     .filter((r) => r.opType === 'receipt')
@@ -80,14 +85,20 @@ export default function JournalPage() {
                 { key: 'status', label: 'وضعیت' },
               ]}
               rows={rows.map((r) => ({
-                ...r,
+                number: r.number,
+                dateJalali: r.dateJalali,
+                dateGregorian: r.dateGregorian,
+                giver: r.giver,
+                receiver: r.receiver,
+                details: r.details,
+                amount: r.amount,
                 currency: r.currency || 'USD',
                 opType: opLabel[r.opType as keyof typeof opLabel] ?? r.opType,
                 status: statusLabel[r.status] ?? r.status,
               }))}
             />
             <CompanySwitcher />
-            <Button>
+            <Button onClick={() => setCreateOpen(true)}>
               <Plus className="ml-2 h-4 w-4" />
               ثبت جدید
             </Button>
@@ -212,51 +223,51 @@ export default function JournalPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {row.links.customerId ? (
+                      {row.links?.customerId ? (
                         <Link
-                          href={`/dashboard/customers/${row.links.customerId}`}
+                          href={`/dashboard/customers/${row.links?.customerId}`}
                           className="text-xs text-[var(--brand)] hover:underline"
                         >
                           مشتری
                         </Link>
                       ) : null}
-                      {row.links.supplierId ? (
+                      {row.links?.supplierId ? (
                         <Link
-                          href={`/dashboard/suppliers/${row.links.supplierId}`}
+                          href={`/dashboard/suppliers/${row.links?.supplierId}`}
                           className="text-xs text-[var(--brand)] hover:underline"
                         >
                           تأمین‌کننده
                         </Link>
                       ) : null}
-                      {row.links.bank ? (
+                      {row.links?.bank ? (
                         <Link href="/dashboard/finance/banks" className="text-xs text-[var(--brand)] hover:underline">بانک</Link>
                       ) : null}
-                      {row.links.cash ? (
+                      {row.links?.cash ? (
                         <Link href="/dashboard/finance/cash" className="text-xs text-[var(--brand)] hover:underline">صندوق</Link>
                       ) : null}
-                      {row.links.exchangeId ? (
+                      {row.links?.exchangeId ? (
                         <Link
-                          href={`/dashboard/exchange/${row.links.exchangeId}`}
+                          href={`/dashboard/exchange/${row.links?.exchangeId}`}
                           className="text-xs text-[var(--brand)] hover:underline"
                         >
                           صراف
                         </Link>
                       ) : null}
-                      {row.links.contractId ? (
+                      {row.links?.contractId ? (
                         <Link
-                          href={`/dashboard/contracts/${row.links.contractId}`}
+                          href={`/dashboard/contracts/${row.links?.contractId}`}
                           className="text-xs text-[var(--brand)] hover:underline"
                         >
                           قرارداد
                         </Link>
                       ) : null}
-                      {row.links.saleId ? (
+                      {row.links?.saleId ? (
                         <Link href="/dashboard/sales" className="text-xs text-[var(--brand)] hover:underline">فروش</Link>
                       ) : null}
-                      {row.links.purchaseId ? (
+                      {row.links?.purchaseId ? (
                         <Link href="/dashboard/purchases" className="text-xs text-[var(--brand)] hover:underline">خرید</Link>
                       ) : null}
-                      {row.links.expenseId ? (
+                      {row.links?.expenseId ? (
                         <Link href="/dashboard/finance/expenses" className="text-xs text-[var(--brand)] hover:underline">هزینه</Link>
                       ) : null}
                     </div>
@@ -283,8 +294,8 @@ export default function JournalPage() {
                         { key: 'status', label: 'وضعیت' },
                       ]}
                       onSave={(next) => {
-                        setItems((prev) =>
-                          prev.map((r) => {
+                        setList('journal',
+                          items.map((r) => {
                             if (r.id !== row.id) return r;
                             return {
                               ...r,
@@ -298,7 +309,7 @@ export default function JournalPage() {
                           })
                         );
                       }}
-                      onDelete={() => setItems((prev) => prev.filter((r) => r.id !== row.id))}
+                      onDelete={() => setList('journal', items.filter((r) => r.id !== row.id) as unknown as OpsRow[])}
                     />
                   </TableCell>
                 </TableRow>
@@ -374,8 +385,8 @@ export default function JournalPage() {
                           { key: 'status', label: 'وضعیت' },
                         ]}
                         onSave={(next) => {
-                          setItems((prev) =>
-                            prev.map((r) => {
+                          setList('journal',
+                            items.map((r) => {
                               if (r.id !== row.id) return r;
                               return {
                                 ...r,
@@ -389,7 +400,7 @@ export default function JournalPage() {
                             })
                           );
                         }}
-                        onDelete={() => setItems((prev) => prev.filter((r) => r.id !== row.id))}
+                        onDelete={() => setList('journal', items.filter((r) => r.id !== row.id) as unknown as OpsRow[])}
                       />
                     }
                   />
@@ -399,6 +410,56 @@ export default function JournalPage() {
           />
         </CardContent>
       </Card>
+
+      <CompactFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="ثبت روزنامچه"
+        fields={[
+          { key: 'number', label: 'شماره', required: true, dir: 'ltr' },
+          { key: 'dateJalali', label: 'تاریخ' },
+          { key: 'giver', label: 'دهنده', required: true },
+          { key: 'receiver', label: 'گیرنده', required: true },
+          { key: 'details', label: 'تفصیلات' },
+          { key: 'amount', label: 'مبلغ', type: 'number', required: true },
+          {
+            key: 'opType',
+            label: 'نوع',
+            type: 'select',
+            options: [
+              { value: 'receipt', label: 'دریافت' },
+              { value: 'payment', label: 'پرداخت' },
+              { value: 'expense', label: 'هزینه' },
+              { value: 'transfer', label: 'انتقال' },
+            ],
+          },
+          {
+            key: 'company',
+            label: 'شرکت',
+            type: 'select',
+            options: [
+              { value: 'arya', label: 'آریا' },
+              { value: 'turkmen', label: 'ترکمن' },
+            ],
+          },
+        ]}
+        submitLabel="ثبت"
+        onSubmit={(v) => {
+          addToList('journal', {
+            number: v.number.trim(),
+            dateJalali: v.dateJalali,
+            dateGregorian: '',
+            giver: v.giver,
+            receiver: v.receiver,
+            details: v.details,
+            amount: Number(v.amount || 0),
+            currency: 'USD',
+            opType: v.opType,
+            status: v.opType === 'receipt' ? 'received' : 'paid',
+            company: (v.company as CompanyKey) || 'arya',
+          });
+        }}
+      />
     </div>
   );
 }

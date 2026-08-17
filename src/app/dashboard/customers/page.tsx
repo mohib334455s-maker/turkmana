@@ -25,14 +25,8 @@ import { TableEmpty } from '@/components/shared/table-empty';
 import { Dialog } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useCompanyStore } from '@/lib/company-store';
-import {
-  customers as initialCustomers,
-  emptyGoods,
-  goodsValue,
-  products,
-  sumGoods,
-  type CustomerRecord,
-} from '@/lib/demo-data';
+import { emptyGoods, goodsValue, products, sumGoods, type CustomerRecord } from '@/lib/demo-data';
+import { useOpsStore } from '@/lib/ops-store';
 import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
 
 type Customer = CustomerRecord;
@@ -40,10 +34,12 @@ type Customer = CustomerRecord;
 export default function CustomersPage() {
   const { company } = useCompanyStore();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<Customer[]>(initialCustomers);
+  const storedCustomers = useOpsStore((s) => s.customers);
+  const setCustomers = useOpsStore((s) => s.setCustomers);
   const [query, setQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', code: '', phone: '', creditLimit: '0' });
+  const rows = storedCustomers;
 
   useEffect(() => {
     if (searchParams.get('new') === '1') setCreateOpen(true);
@@ -252,8 +248,8 @@ export default function CustomersPage() {
                           { key: 'status', label: 'وضعیت' },
                         ]}
                         onSave={(next) => {
-                          setRows((prev) =>
-                            prev.map((r) =>
+                          setCustomers(
+                          rows.map((r) =>
                               r.id === c.id
                                 ? {
                                     ...r,
@@ -268,7 +264,7 @@ export default function CustomersPage() {
                             )
                           );
                         }}
-                        onDelete={() => setRows((prev) => prev.filter((r) => r.id !== c.id))}
+                        onDelete={() => setCustomers(rows.filter((r) => r.id !== c.id))}
                       />
                     </TableCell>
                   </TableRow>
@@ -332,8 +328,8 @@ export default function CustomersPage() {
                           { key: 'status', label: 'وضعیت' },
                         ]}
                         onSave={(next) => {
-                          setRows((prev) =>
-                            prev.map((r) =>
+                          setCustomers(
+                          rows.map((r) =>
                               r.id === c.id
                                 ? {
                                     ...r,
@@ -348,7 +344,7 @@ export default function CustomersPage() {
                             )
                           );
                         }}
-                        onDelete={() => setRows((prev) => prev.filter((r) => r.id !== c.id))}
+                        onDelete={() => setCustomers(rows.filter((r) => r.id !== c.id))}
                       />
                     }
                   />
@@ -372,7 +368,7 @@ export default function CustomersPage() {
             <Button
               onClick={() => {
                 const id = rows.reduce((m, r) => Math.max(m, r.id), 0) + 1;
-                setRows((prev) => [
+                setCustomers([
                   {
                     id,
                     code: draft.code || `CUST-${String(id).padStart(3, '0')}`,
@@ -386,7 +382,7 @@ export default function CustomersPage() {
                       turkmen: { cashBalance: 0, goods: emptyGoods() },
                     },
                   },
-                  ...prev,
+                  ...rows,
                 ]);
                 setCreateOpen(false);
                 setDraft({ name: '', code: '', phone: '', creditLimit: '0' });

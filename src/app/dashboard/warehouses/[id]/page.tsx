@@ -149,7 +149,7 @@ export default function WarehouseDetailPage({
                   {products.map((p) => {
                     const stock = warehouse.stock[p.code] ?? 0;
                     const reserved = warehouse.reserved[p.code] ?? 0;
-                    const price = warehouse.unitPrice[p.code] ?? 0;
+                    const price = warehouse.unitPrice?.[p.code] ?? 0;
                     return (
                       <TableRow key={p.code}>
                         <TableCell className="font-medium">{p.name}</TableCell>
@@ -174,7 +174,7 @@ export default function WarehouseDetailPage({
                 cards={products.map((p) => {
                   const stock = warehouse.stock[p.code] ?? 0;
                   const reserved = warehouse.reserved[p.code] ?? 0;
-                  const price = warehouse.unitPrice[p.code] ?? 0;
+                  const price = warehouse.unitPrice?.[p.code] ?? 0;
                   const available = stock - reserved;
                   const empty = available <= 0;
                   const low = available > 0 && available < 50;

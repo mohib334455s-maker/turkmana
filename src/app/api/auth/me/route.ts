@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
           email: payload.email,
           fullName:
             payload.userId === 1
-              ? 'مدیر سیستم'
+              ? 'مدیر ترکمن'
               : payload.email,
           role: payload.role ?? 'user',
           companyAccess: payload.companyAccess ?? (payload.role === 'admin' ? 'both' : 'arya'),

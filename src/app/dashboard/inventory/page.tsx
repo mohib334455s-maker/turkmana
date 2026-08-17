@@ -27,7 +27,7 @@ export default function InventoryPage() {
     const qty = rows.reduce((s, w) => s + (w.stock[p.code] ?? 0), 0);
     const reserved = rows.reduce((s, w) => s + (w.reserved[p.code] ?? 0), 0);
     const value = rows.reduce(
-      (s, w) => s + (w.stock[p.code] ?? 0) * (w.unitPrice[p.code] ?? 0),
+      (s, w) => s + (w.stock[p.code] ?? 0) * (w.unitPrice?.[p.code] ?? 0),
       0
     );
     return { ...p, qty, reserved, available: qty - reserved, value };

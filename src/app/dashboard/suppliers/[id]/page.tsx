@@ -27,7 +27,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExportButtons } from '@/components/shared/export-buttons';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
-import { supplierLedgers, suppliers } from '@/lib/demo-data';
+import { supplierLedgers } from '@/lib/demo-data';
+import { useOpsStore } from '@/lib/ops-store';
 import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
 
 export default function SupplierLedgerPage({
@@ -37,7 +38,9 @@ export default function SupplierLedgerPage({
 }) {
   const { id } = use(params);
   const supplierId = Number(id);
-  const supplier = suppliers.find((s) => s.id === supplierId);
+  const supplier = useOpsStore((store) =>
+    store.suppliers.find((row) => row.id === supplierId)
+  );
   const ledger = supplierLedgers[supplierId] ?? [];
 
   if (!supplier) {

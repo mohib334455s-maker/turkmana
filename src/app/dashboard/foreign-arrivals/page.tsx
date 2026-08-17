@@ -20,14 +20,21 @@ import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { RecordActions } from '@/components/shared/record-actions';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { TableEmpty } from '@/components/shared/table-empty';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { foreignArrivals as initialRows } from '@/lib/demo-data';
+import { useOpsStore, type OpsRow } from '@/lib/ops-store';
+import type { CompanyKey, ForeignArrivalRecord } from '@/lib/demo-data';
 import { formatNumber } from '@/lib/utils';
 import { BiLabel } from '@/components/shared/bi-label';
 
+const EMPTY: OpsRow[] = [];
+
 export default function ForeignArrivalsPage() {
   const { company } = useCompanyStore();
-  const [items, setItems] = useState(initialRows);
+  const items = useOpsStore((s) => (s.lists.foreignArrivals ?? EMPTY) as unknown as ForeignArrivalRecord[]);
+  const setList = useOpsStore((s) => s.setList);
+  const addToList = useOpsStore((s) => s.addToList);
+  const [createOpen, setCreateOpen] = useState(false);
   const rows = items.filter((a) => matchesCompany(a.company, company));
 
   return (
@@ -62,35 +69,7 @@ export default function ForeignArrivalsPage() {
               rows={rows}
             />
             <CompanySwitcher />
-            <Button onClick={() => {
-              const id = items.reduce((m, r) => Math.max(m, r.id), 0) + 1;
-              setItems((prev) => [
-                {
-                  id,
-                  number: `FA-${id}`,
-                  dateJalali: '',
-                  product: '',
-                  supplier: '',
-                  supplierId: 0,
-                  contractId: 0,
-                  contractNumber: '',
-                  shipmentNo: '',
-                  wagons: 0,
-                  seymirWeight: 0,
-                  unloadedWagons: 0,
-                  unloadedWeight: 0,
-                  shortage: 0,
-                  location: '',
-                  originCountry: '',
-                  border: '',
-                  destWarehouse: '',
-                  status: '',
-                  company: 'arya',
-                  notes: '',
-                },
-                ...prev,
-              ]);
-            }}>
+            <Button onClick={() => setCreateOpen(true)}>
               <Plus className="ml-2 h-4 w-4" />
               وارده جدید
             </Button>
@@ -204,8 +183,9 @@ export default function ForeignArrivalsPage() {
                         { key: 'notes', label: 'ملاحظات', multiline: true },
                       ]}
                       onSave={(next) => {
-                        setItems((prev) =>
-                          prev.map((r) =>
+                        setList(
+                          'foreignArrivals',
+                          items.map((r) =>
                             r.id === a.id
                               ? {
                                   ...r,
@@ -221,7 +201,7 @@ export default function ForeignArrivalsPage() {
                           )
                         );
                       }}
-                      onDelete={() => setItems((prev) => prev.filter((r) => r.id !== a.id))}
+                      onDelete={() => setList('foreignArrivals', items.filter((r) => r.id !== a.id))}
                     />
                   </TableCell>
                 </TableRow>
@@ -284,8 +264,9 @@ export default function ForeignArrivalsPage() {
                           { key: 'notes', label: 'ملاحظات', multiline: true },
                         ]}
                         onSave={(next) => {
-                          setItems((prev) =>
-                            prev.map((r) =>
+                          setList(
+                            'foreignArrivals',
+                            items.map((r) =>
                               r.id === a.id
                                 ? {
                                     ...r,
@@ -301,7 +282,7 @@ export default function ForeignArrivalsPage() {
                             )
                           );
                         }}
-                        onDelete={() => setItems((prev) => prev.filter((r) => r.id !== a.id))}
+                        onDelete={() => setList('foreignArrivals', items.filter((r) => r.id !== a.id))}
                       />
                     }
                   />
@@ -311,6 +292,57 @@ export default function ForeignArrivalsPage() {
           />
         </CardContent>
       </Card>
+
+      <CompactFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="وارده جدید"
+        description="فرم کوتاه ثبت وارده خارجی"
+        fields={[
+          { key: 'number', label: 'شماره', required: true, dir: 'ltr', placeholder: 'FA-001' },
+          { key: 'dateJalali', label: 'تاریخ', placeholder: '1405/01/01' },
+          { key: 'supplier', label: 'فروشنده', required: true },
+          { key: 'product', label: 'نوع جنس', required: true },
+          { key: 'contractNumber', label: 'قرارداد' },
+          { key: 'seymirWeight', label: 'وزن/مقدار', type: 'number' },
+          { key: 'location', label: 'محل' },
+          { key: 'originCountry', label: 'کشور مبدأ' },
+          {
+            key: 'company',
+            label: 'شرکت',
+            type: 'select',
+            options: [
+              { value: 'arya', label: 'آریا' },
+              { value: 'turkmen', label: 'ترکمن' },
+            ],
+          },
+        ]}
+        submitLabel="ثبت وارده"
+        onSubmit={(v) => {
+          addToList('foreignArrivals', {
+            number: v.number.trim(),
+            dateJalali: v.dateJalali,
+            product: v.product,
+            supplier: v.supplier,
+            supplierId: 0,
+            contractId: 0,
+            contractNumber: v.contractNumber,
+            shipmentNo: '',
+            wagons: 0,
+            seymirWeight: Number(v.seymirWeight || 0),
+            unloadedWagons: 0,
+            unloadedWeight: 0,
+            shortage: 0,
+            location: v.location,
+            originCountry: v.originCountry,
+            border: '',
+            destWarehouse: '',
+            status: 'در راه',
+            company: (v.company as CompanyKey) || 'arya',
+            notes: '',
+          });
+        }}
+      />
     </div>
   );
 }

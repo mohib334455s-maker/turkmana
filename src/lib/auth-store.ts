@@ -42,8 +42,8 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       role: 'admin',
-      email: 'admin@example.com',
-      fullName: 'مدیر سیستم',
+      email: 'turkman',
+      fullName: 'مدیر ترکمن',
       companyAccess: 'both',
       setSession: (session) =>
         set({
@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState>()(
         }),
       clear: () => set({ role: 'user', email: '', fullName: '', companyAccess: 'arya' }),
     }),
-    { name: 'erp-auth-session' }
+    { name: 'erp-auth-session-v3' }
   )
 );
 

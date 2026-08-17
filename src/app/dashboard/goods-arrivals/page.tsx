@@ -20,14 +20,23 @@ import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { RecordActions } from '@/components/shared/record-actions';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { TableEmpty } from '@/components/shared/table-empty';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { goodsArrivals as initialRows } from '@/lib/demo-data';
+import { useOpsStore, type OpsRow } from '@/lib/ops-store';
+import type { CompanyKey, GoodsArrivalRecord } from '@/lib/demo-data';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { BiLabel } from '@/components/shared/bi-label';
 
+const EMPTY: OpsRow[] = [];
+
 export default function GoodsArrivalsPage() {
   const { company } = useCompanyStore();
-  const [items, setItems] = useState(initialRows);
+  const items = useOpsStore(
+    (s) => (s.lists.goodsArrivals ?? EMPTY) as unknown as GoodsArrivalRecord[]
+  );
+  const addToList = useOpsStore((s) => s.addToList);
+  const setList = useOpsStore((s) => s.setList);
+  const [createOpen, setCreateOpen] = useState(false);
   const rows = items.filter((g) => matchesCompany(g.company, company));
 
   return (
@@ -65,10 +74,23 @@ export default function GoodsArrivalsPage() {
                 { key: 'status', label: 'وضعیت' },
                 { key: 'notes', label: 'ملاحظات' },
               ]}
-              rows={rows}
+              rows={rows.map((r) => ({
+                number: r.number,
+                dateJalali: r.dateJalali,
+                supplier: r.supplier,
+                loaderCompany: r.loaderCompany,
+                contractNumber: r.contractNumber,
+                product: r.product,
+                location: r.location,
+                cmrNumber: r.cmrNumber,
+                netWeight: r.netWeight,
+                totalPrice: r.totalPrice,
+                status: r.status,
+                notes: r.notes,
+              }))}
             />
             <CompanySwitcher />
-            <Button>
+            <Button onClick={() => setCreateOpen(true)}>
               <Plus className="ml-2 h-4 w-4" />
               ثبت وارده
             </Button>
@@ -185,8 +207,8 @@ export default function GoodsArrivalsPage() {
                         { key: 'totalPrice', label: 'مبلغ کل' },
                       ]}
                       onSave={(next) => {
-                        setItems((prev) =>
-                          prev.map((r) =>
+                        setList('goodsArrivals',
+                          items.map((r) =>
                             r.id === g.id
                               ? {
                                   ...r,
@@ -202,7 +224,7 @@ export default function GoodsArrivalsPage() {
                           )
                         );
                       }}
-                      onDelete={() => setItems((prev) => prev.filter((r) => r.id !== g.id))}
+                      onDelete={() => setList('goodsArrivals', items.filter((r) => r.id !== g.id) as unknown as OpsRow[])}
                     />
                   </TableCell>
                 </TableRow>
@@ -264,8 +286,8 @@ export default function GoodsArrivalsPage() {
                           { key: 'totalPrice', label: 'مبلغ کل' },
                         ]}
                         onSave={(next) => {
-                          setItems((prev) =>
-                            prev.map((r) =>
+                          setList('goodsArrivals',
+                            items.map((r) =>
                               r.id === g.id
                                 ? {
                                     ...r,
@@ -281,7 +303,7 @@ export default function GoodsArrivalsPage() {
                             )
                           );
                         }}
-                        onDelete={() => setItems((prev) => prev.filter((r) => r.id !== g.id))}
+                        onDelete={() => setList('goodsArrivals', items.filter((r) => r.id !== g.id) as unknown as OpsRow[])}
                       />
                     }
                   />
@@ -291,6 +313,64 @@ export default function GoodsArrivalsPage() {
           />
         </CardContent>
       </Card>
+
+      <CompactFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="ثبت محموله CMR"
+        description="فرم کوتاه ثبت وارده و حمل"
+        fields={[
+          { key: 'number', label: 'شماره', required: true, dir: 'ltr' },
+          { key: 'dateJalali', label: 'تاریخ' },
+          { key: 'supplier', label: 'فروشنده', required: true },
+          { key: 'product', label: 'کالا', required: true },
+          { key: 'contractNumber', label: 'قرارداد' },
+          { key: 'cmrNumber', label: 'شماره CMR', dir: 'ltr' },
+          { key: 'netWeight', label: 'وزن خالص', type: 'number' },
+          { key: 'location', label: 'محل' },
+          {
+            key: 'company',
+            label: 'شرکت',
+            type: 'select',
+            options: [
+              { value: 'arya', label: 'آریا' },
+              { value: 'turkmen', label: 'ترکمن' },
+            ],
+          },
+        ]}
+        submitLabel="ثبت"
+        onSubmit={(v) => {
+          addToList('goodsArrivals', {
+            number: v.number.trim(),
+            dateJalali: v.dateJalali,
+            dateGregorian: '',
+            supplier: v.supplier,
+            supplierId: 0,
+            loaderCompany: v.supplier,
+            contractId: 0,
+            contractNumber: v.contractNumber,
+            product: v.product,
+            location: v.location,
+            loadSite: '',
+            unloadSite: v.location,
+            route: '',
+            wagonNumber: '',
+            railwayCarriageNo: '',
+            description: '',
+            cmrNumber: v.cmrNumber,
+            cmrWeight: Number(v.netWeight || 0),
+            netWeight: Number(v.netWeight || 0),
+            weightDiff: 0,
+            pricePerUnit: 0,
+            totalPrice: 0,
+            balance: 0,
+            currency: 'USD',
+            status: 'در_راه',
+            notes: '',
+            company: (v.company as CompanyKey) || 'arya',
+          });
+        }}
+      />
     </div>
   );
 }

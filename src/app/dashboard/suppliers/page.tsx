@@ -22,15 +22,17 @@ import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/
 import { TableEmpty } from '@/components/shared/table-empty';
 import { Dialog } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { emptyGoods, products, suppliers as initialSuppliers, goodsValue } from '@/lib/demo-data';
+import { emptyGoods, products, goodsValue, type SupplierRecord } from '@/lib/demo-data';
+import { useOpsStore } from '@/lib/ops-store';
 import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
 import Link from 'next/link';
 
-type Supplier = (typeof initialSuppliers)[number];
+type Supplier = SupplierRecord;
 
 export default function SuppliersPage() {
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<Supplier[]>(initialSuppliers);
+  const rows = useOpsStore((s) => s.suppliers);
+  const setSuppliers = useOpsStore((s) => s.setSuppliers);
   const [query, setQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', code: '', country: '', phone: '' });
@@ -213,8 +215,8 @@ export default function SuppliersPage() {
                         { key: 'cashBalance', label: 'بیلانس نقدی' },
                       ]}
                       onSave={(next) => {
-                        setRows((prev) =>
-                          prev.map((r) =>
+                        setSuppliers(
+                          rows.map((r) =>
                             r.id === s.id
                               ? {
                                   ...r,
@@ -229,7 +231,7 @@ export default function SuppliersPage() {
                           )
                         );
                       }}
-                      onDelete={() => setRows((prev) => prev.filter((r) => r.id !== s.id))}
+                      onDelete={() => setSuppliers(rows.filter((r) => r.id !== s.id))}
                     />
                   </TableCell>
                 </TableRow>
@@ -294,8 +296,8 @@ export default function SuppliersPage() {
                           { key: 'cashBalance', label: 'بیلانس نقدی' },
                         ]}
                         onSave={(next) => {
-                          setRows((prev) =>
-                            prev.map((r) =>
+                          setSuppliers(
+                            rows.map((r) =>
                               r.id === s.id
                                 ? {
                                     ...r,
@@ -310,7 +312,7 @@ export default function SuppliersPage() {
                             )
                           );
                         }}
-                        onDelete={() => setRows((prev) => prev.filter((r) => r.id !== s.id))}
+                        onDelete={() => setSuppliers(rows.filter((r) => r.id !== s.id))}
                       />
                     }
                   />
@@ -332,7 +334,7 @@ export default function SuppliersPage() {
             <Button
               onClick={() => {
                 const id = rows.reduce((m, r) => Math.max(m, r.id), 0) + 1;
-                setRows((prev) => [
+                setSuppliers([
                   {
                     id,
                     code: draft.code || `SUP-${String(id).padStart(3, '0')}`,
@@ -344,7 +346,7 @@ export default function SuppliersPage() {
                     lastTxn: '-',
                     goods: emptyGoods(),
                   } as Supplier,
-                  ...prev,
+                  ...rows,
                 ]);
                 setCreateOpen(false);
                 setDraft({ name: '', code: '', country: '', phone: '' });

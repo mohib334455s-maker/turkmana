@@ -25,6 +25,7 @@ import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/
 import { BottomSheet } from '@/components/shared/bottom-sheet';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { useCompanyStore } from '@/lib/company-store';
+import { useOpsStore } from '@/lib/ops-store';
 import { useI18n } from '@/lib/i18n/store';
 import { StackLabel } from '@/components/shared/bi-label';
 import { cn } from '@/lib/utils';
@@ -75,7 +76,7 @@ export type CrudModuleConfig = {
 function emptyForm(fields: FieldDef[]): CrudRow {
   const row: CrudRow = {};
   for (const f of fields) {
-    row[f.key] = f.type === 'number' ? 0 : f.options?.[0]?.value ?? '';
+    row[f.key] = f.type === 'number' ? '' : f.options?.[0]?.value ?? '';
   }
   return row;
 }
@@ -108,12 +109,20 @@ export function CrudPage({
   const { company } = useCompanyStore();
   const { t, locale } = useI18n();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<CrudRow[]>(() =>
-    initialRows.map((r, i) => ({
-      ...r,
-      [idKey]: r[idKey] ?? i + 1,
-    }))
-  );
+  const persistKey = `crud:${entityName}`;
+  const [rows, setRows] = useState<CrudRow[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const saved = useOpsStore.getState().getCrud(persistKey);
+    setRows(saved ?? []);
+    setHydrated(true);
+  }, [persistKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    useOpsStore.getState().setCrud(persistKey, rows);
+  }, [hydrated, persistKey, rows]);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -474,7 +483,7 @@ export function CrudPage({
             ? `${t('newEntity')} ${bi(entityName, locale)}`
             : `${t('edit')} ${bi(entityName, locale)}`
         }
-        size="lg"
+        size="md"
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)}>

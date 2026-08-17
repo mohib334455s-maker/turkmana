@@ -5,27 +5,12 @@ import { isDemoAuth } from '@/lib/demo-auth';
 const DEMO_USERS = [
   {
     id: 1,
-    email: 'admin@example.com',
-    password: 'admin123',
-    fullName: 'مدیر سیستم',
+    username: 'turkman',
+    email: 'turkman',
+    password: 'aria1234',
+    fullName: 'مدیر ترکمن',
     role: 'admin',
     companyAccess: 'both',
-  },
-  {
-    id: 2,
-    email: 'arya@example.com',
-    password: 'arya123',
-    fullName: 'کاربر آریا',
-    role: 'manager',
-    companyAccess: 'arya',
-  },
-  {
-    id: 3,
-    email: 'turkmen@example.com',
-    password: 'turkmen123',
-    fullName: 'کاربر ترکمن',
-    role: 'manager',
-    companyAccess: 'turkmen',
   },
 ];
 
@@ -73,21 +58,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password } = body;
 
-    if (!email || !password) {
+    const loginId = String(email ?? body.username ?? '').trim().toLowerCase();
+
+    if (!loginId || !password) {
       return NextResponse.json(
-        { error: 'ایمیل و رمز عبور الزامی است' },
+        { error: 'نام کاربری و رمز عبور الزامی است' },
         { status: 400 }
       );
     }
-
-    const demoUser = DEMO_USERS.find((u) => u.email === email && u.password === password);
+    const demoUser = DEMO_USERS.find(
+      (u) =>
+        password === u.password &&
+        (u.email.toLowerCase() === loginId || u.username.toLowerCase() === loginId)
+    );
 
     if (isDemoAuth()) {
       if (demoUser) {
         return loginSuccessResponse(demoUser);
       }
       return NextResponse.json(
-        { error: 'ایمیل یا رمز عبور نادرست است' },
+        { error: 'نام کاربری یا رمز عبور نادرست است' },
         { status: 401 }
       );
     }
@@ -103,7 +93,7 @@ export async function POST(request: NextRequest) {
 
       if (!user || !user.isActive) {
         return NextResponse.json(
-          { error: 'ایمیل یا رمز عبور نادرست است' },
+          { error: 'نام کاربری یا رمز عبور نادرست است' },
           { status: 401 }
         );
       }
@@ -111,7 +101,7 @@ export async function POST(request: NextRequest) {
       const isValidPassword = await verifyPassword(password, user.password);
       if (!isValidPassword) {
         return NextResponse.json(
-          { error: 'ایمیل یا رمز عبور نادرست است' },
+          { error: 'نام کاربری یا رمز عبور نادرست است' },
           { status: 401 }
         );
       }
@@ -129,7 +119,7 @@ export async function POST(request: NextRequest) {
         return loginSuccessResponse(demoUser);
       }
       return NextResponse.json(
-        { error: 'ایمیل یا رمز عبور نادرست است' },
+        { error: 'نام کاربری یا رمز عبور نادرست است' },
         { status: 401 }
       );
     }

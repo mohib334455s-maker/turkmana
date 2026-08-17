@@ -30,7 +30,8 @@ import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
 import { customerTxnLabels, resaleProfitPerTon } from '@/lib/customer-ledger';
-import { customerLedgers, customers, products } from '@/lib/demo-data';
+import { customerLedgers, products } from '@/lib/demo-data';
+import { useOpsStore } from '@/lib/ops-store';
 import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
 
 const txnBadgeVariant = (txnType: string) => {
@@ -48,7 +49,7 @@ export default function CustomerLedgerPage({
   const { id } = use(params);
   const customerId = Number(id);
   const { company } = useCompanyStore();
-  const customer = customers.find((c) => c.id === customerId);
+  const customer = useOpsStore((s) => s.customers.find((c) => c.id === customerId));
   const ledger = (customerLedgers[customerId] ?? []).filter((r) =>
     matchesCompany(r.company, company)
   );

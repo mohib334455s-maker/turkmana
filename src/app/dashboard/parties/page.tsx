@@ -18,13 +18,19 @@ import { ExportButtons } from '@/components/shared/export-buttons';
 import { RecordActions } from '@/components/shared/record-actions';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { TableEmpty } from '@/components/shared/table-empty';
-import { parties as initialParties } from '@/lib/demo-data';
+import { Plus } from 'lucide-react';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
+import { useOpsStore, type OpsRow } from '@/lib/ops-store';
+import type { PartyRecord } from '@/lib/demo-data';
 import { formatNumber } from '@/lib/utils';
 
-type PartyRow = (typeof initialParties)[number];
+const EMPTY: OpsRow[] = [];
 
 export default function PartiesPage() {
-  const [rows, setRows] = useState<PartyRow[]>([...initialParties]);
+  const rows = useOpsStore((s) => (s.lists.parties ?? EMPTY) as unknown as PartyRecord[]);
+  const addToList = useOpsStore((s) => s.addToList);
+  const setList = useOpsStore((s) => s.setList);
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -53,6 +59,10 @@ export default function PartiesPage() {
               ]}
               rows={rows}
             />
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="ml-2 h-4 w-4" />
+              پارتی جدید
+            </Button>
             <Link href="/dashboard/contracts">
             <Button variant="outline">مشاهده قراردادها</Button>
             </Link>
@@ -138,8 +148,9 @@ export default function PartiesPage() {
                         { key: 'status', label: 'وضعیت' },
                       ]}
                       onSave={(next) => {
-                        setRows((prev) =>
-                          prev.map((r) => {
+                        setList(
+                          'parties',
+                          rows.map((r) => {
                             if (r.id !== p.id) return r;
                             return {
                               ...r,
@@ -151,7 +162,7 @@ export default function PartiesPage() {
                           })
                         );
                       }}
-                      onDelete={() => setRows((prev) => prev.filter((r) => r.id !== p.id))}
+                      onDelete={() => setList('parties', rows.filter((r) => r.id !== p.id))}
                     />
                   </TableCell>
                 </TableRow>
@@ -207,8 +218,9 @@ export default function PartiesPage() {
                           { key: 'status', label: 'وضعیت' },
                         ]}
                         onSave={(next) => {
-                          setRows((prev) =>
-                            prev.map((r) => {
+                          setList(
+                            'parties',
+                            rows.map((r) => {
                               if (r.id !== p.id) return r;
                               return {
                                 ...r,
@@ -220,7 +232,7 @@ export default function PartiesPage() {
                             })
                           );
                         }}
-                        onDelete={() => setRows((prev) => prev.filter((r) => r.id !== p.id))}
+                        onDelete={() => setList('parties', rows.filter((r) => r.id !== p.id))}
                       />
                     }
                   />
@@ -230,6 +242,38 @@ export default function PartiesPage() {
           />
         </CardContent>
       </Card>
+
+      <CompactFormDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="پارتی جدید"
+        fields={[
+          { key: 'number', label: 'شماره پارتی', required: true, dir: 'ltr' },
+          { key: 'contractNumber', label: 'شماره قرارداد', required: true },
+          { key: 'location', label: 'محل' },
+          { key: 'qty', label: 'مقدار', type: 'number', required: true },
+        ]}
+        submitLabel="ثبت"
+        onSubmit={(v) => {
+          const qty = Number(v.qty || 0);
+          addToList('parties', {
+            number: v.number.trim(),
+            contractId: 0,
+            contractNumber: v.contractNumber.trim(),
+            location: v.location,
+            wagons: 0,
+            qty,
+            arrived: 0,
+            unloaded: 0,
+            sold: 0,
+            shortage: 0,
+            waste: 0,
+            sellable: qty,
+            transit: 0,
+            status: 'ثبت‌شده',
+          });
+        }}
+      />
     </div>
   );
 }

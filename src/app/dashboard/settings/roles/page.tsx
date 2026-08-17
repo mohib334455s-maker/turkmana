@@ -9,6 +9,9 @@ import { ModuleIcon } from '@/components/shared/module-icon';
 import { useI18n } from '@/lib/i18n/store';
 import { systemRoles } from '@/lib/roles';
 import { COMPANY_ACCESS_LABELS } from '@/lib/company-access';
+import { canGrantProfitLoss, usePermissionsStore } from '@/lib/permissions';
+import { useAuthStore, type UserRole } from '@/lib/auth-store';
+import { Button } from '@/components/ui/button';
 
 const companyRules = [
   {
@@ -37,6 +40,10 @@ const companyRules = [
 export default function RolesPage() {
   const { locale } = useI18n();
   const isFa = locale === 'fa';
+  const role = useAuthStore((s) => s.role);
+  const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
+  const toggleProfitLossRole = usePermissionsStore((s) => s.toggleProfitLossRole);
+  const canGrant = canGrantProfitLoss(role);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -64,6 +71,42 @@ export default function RolesPage() {
           />
         }
       />
+
+      <Card className="border-amber-100">
+        <CardContent className="space-y-3 p-5">
+          <p className="text-[15px] font-extrabold text-slate-900">
+            {isFa ? 'صلاحیت مفاد و ضرر' : 'Profit & loss access'}
+          </p>
+          <p className="text-xs leading-6 text-slate-500">
+            {isFa
+              ? 'بعضی نقش‌ها اصلاً نباید قسمت مفاد و ضرر را ببینند. فقط ادمین می‌تواند این صلاحیت را قید یا باز کند. انباردار و فروش به‌صورت پیش‌فرض بسته است.'
+              : 'Some roles must not see profit & loss. Only an admin can grant or revoke this. Warehouse and sales are off by default.'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {systemRoles.map((r) => {
+              const on = r.key === 'admin' || profitLossRoles.includes(r.key as UserRole);
+              return (
+                <Button
+                  key={r.key}
+                  type="button"
+                  size="sm"
+                  variant={on ? 'default' : 'outline'}
+                  disabled={!canGrant || r.key === 'admin'}
+                  onClick={() => toggleProfitLossRole(r.key)}
+                >
+                  {isFa ? r.titleFa : r.titleEn}
+                  {on ? ' ✓' : ''}
+                </Button>
+              );
+            })}
+          </div>
+          {!canGrant ? (
+            <p className="text-[11px] text-slate-400">
+              {isFa ? 'فقط ادمین می‌تواند این تیک‌ها را عوض کند.' : 'Only an admin can change these ticks.'}
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 md:grid-cols-3">
         {companyRules.map((rule) => (

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog } from '@/components/ui/dialog';
+import { useI18n } from '@/lib/i18n/store';
 
 export type ActionField = {
   key: string;
@@ -33,6 +34,7 @@ export function RecordActions({
   onDelete?: () => void;
   layout?: 'icons' | 'buttons';
 }) {
+  const { t } = useI18n();
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -52,26 +54,26 @@ export function RecordActions({
           {detailHref ? (
             <a href={detailHref}>
               <Button size="sm" variant="outline">
-                مشاهده
+                {t('view')}
               </Button>
             </a>
           ) : (
             <Button size="sm" variant="outline" onClick={() => setDetailOpen(true)}>
-              مشاهده
+              {t('view')}
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={openEdit}>
-            ویرایش
+            {t('edit')}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setDeleteOpen(true)}>
-            حذف
+            {t('delete')}
           </Button>
         </div>
       ) : (
         <div className="flex items-center justify-end gap-0.5">
           {detailHref ? (
             <a href={detailHref}>
-              <Button size="icon" variant="ghost" title="جزئیات">
+              <Button size="icon" variant="ghost" title={t('details')}>
                 <Eye className="h-4 w-4" />
               </Button>
             </a>
@@ -79,19 +81,19 @@ export function RecordActions({
             <Button
               size="icon"
               variant="ghost"
-              title="جزئیات"
+              title={t('details')}
               onClick={() => setDetailOpen(true)}
             >
               <Eye className="h-4 w-4" />
             </Button>
           )}
-          <Button size="icon" variant="ghost" title="ویرایش" onClick={openEdit}>
+          <Button size="icon" variant="ghost" title={t('edit')} onClick={openEdit}>
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
             size="icon"
             variant="ghost"
-            title="حذف"
+            title={t('delete')}
             onClick={() => setDeleteOpen(true)}
           >
             <Trash2 className="h-4 w-4 text-red-500" />
@@ -102,12 +104,12 @@ export function RecordActions({
       <Dialog
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
-        title={`جزئیات ${title}`}
+        title={`${t('details')} ${title}`}
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={() => setDetailOpen(false)}>
-              بستن
+              {t('close')}
             </Button>
             <Button
               onClick={() => {
@@ -115,7 +117,7 @@ export function RecordActions({
                 openEdit();
               }}
             >
-              ویرایش
+              {t('edit')}
             </Button>
           </>
         }
@@ -138,12 +140,12 @@ export function RecordActions({
       <Dialog
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        title={`ویرایش ${title}`}
+        title={`${t('edit')} ${title}`}
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={() => setEditOpen(false)}>
-              انصراف
+              {t('cancel')}
             </Button>
             <Button
               onClick={() => {
@@ -151,7 +153,7 @@ export function RecordActions({
                 setEditOpen(false);
               }}
             >
-              ذخیره
+              {t('save')}
             </Button>
           </>
         }
@@ -183,13 +185,13 @@ export function RecordActions({
       <Dialog
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        title={`حذف ${title}`}
-        description="آیا از حذف این رکورد مطمئن هستید؟"
+        title={`${t('delete')} ${title}`}
+        description={t('confirmDelete')}
         size="sm"
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              انصراف
+              {t('cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -198,14 +200,12 @@ export function RecordActions({
                 setDeleteOpen(false);
               }}
             >
-              حذف
+              {t('delete')}
             </Button>
           </>
         }
       >
-        <p className="text-sm text-slate-600">
-          این تغییر فقط در جلسه جاری اعمال می‌شود.
-        </p>
+        <p className="text-sm text-slate-600">{t('sessionOnly')}</p>
       </Dialog>
     </>
   );

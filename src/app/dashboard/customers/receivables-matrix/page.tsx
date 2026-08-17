@@ -20,10 +20,12 @@ import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/
 import { TableEmpty } from '@/components/shared/table-empty';
 import { customerReceivablesMatrix } from '@/lib/demo-data';
 import { balanceClass, formatCurrency, formatNumber } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/store';
 
 const companyLabels = { arya: 'آریا', turkmen: 'ترکمن' } as const;
 
 export default function ReceivablesMatrixPage() {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
 
   const rows = useMemo(
@@ -52,7 +54,7 @@ export default function ReceivablesMatrixPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="طلب جنسی و نقدی مشتریان"
+        title={t('pageReceivablesMatrix')}
         description="طلب نقدی + ماتریس جنسی به تفکیک آریا / ترکمن × محل × کالا"
         actions={
           <>

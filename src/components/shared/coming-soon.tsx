@@ -1,6 +1,9 @@
+'use client';
+
 import { Construction } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/shared/page-header';
+import { useI18n } from '@/lib/i18n/store';
 
 export function ComingSoon({
   title,
@@ -9,6 +12,7 @@ export function ComingSoon({
   title: string;
   description?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader title={title} description={description} />
@@ -17,13 +21,8 @@ export function ComingSoon({
           <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center">
             <Construction className="w-7 h-7 text-amber-600" />
           </div>
-          <h2 className="text-lg font-semibold text-slate-800">
-            آماده اتصال — فاز بعدی
-          </h2>
-          <p className="text-sm text-slate-500 max-w-md">
-            این صفحه در ساختار منو قرار گرفته و پس از تکمیل هستهٔ عملیاتی با داده و
-            API واقعی پر خواهد شد.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-800">{t('comingSoonTitle')}</h2>
+          <p className="text-sm text-slate-500 max-w-md">{t('comingSoonBody')}</p>
         </CardContent>
       </Card>
     </div>

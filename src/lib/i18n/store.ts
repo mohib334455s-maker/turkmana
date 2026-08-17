@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { pickLocaleLabel } from './label-map';
 import { messages, type Locale, type MessageKey, type NavKey } from './messages';
 
 interface UiState {
@@ -60,5 +61,7 @@ export function useI18n() {
   const t = (key: MessageKey) => dict[key] as string;
   const tn = (key: NavKey) => dict.nav[key];
   const dir = locale === 'fa' ? 'rtl' : 'ltr';
-  return { locale, dir, t, tn, dict };
+  const tx = (fa: string, en: string) => (locale === 'en' ? en : fa);
+  const pick = (label: string) => pickLocaleLabel(label, locale);
+  return { locale, dir, t, tn, dict, tx, pick };
 }

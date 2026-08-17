@@ -16,6 +16,7 @@ import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { COMPANY_LABELS, useCompanyStore } from '@/lib/company-store';
 import { balanceSheetAccounts, financialSummary } from '@/lib/demo-data';
 import { balanceClass, formatCurrency } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/store';
 
 const expenseLabels: Record<string, string> = {
   bankCommission: 'کمیسیون بانک',
@@ -26,6 +27,7 @@ const expenseLabels: Record<string, string> = {
 };
 
 export default function BalanceSheetPage() {
+  const { t } = useI18n();
   const { company } = useCompanyStore();
   const summary = financialSummary[company];
 
@@ -54,7 +56,7 @@ export default function BalanceSheetPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="بیلانس عمومی شرکت"
+        title={t('pageBalanceSheet')}
         description={`خلاصه بیلانس خرید/فروش، دارایی‌ها و مصارف — ${COMPANY_LABELS[company]}`}
         actions={
           <>

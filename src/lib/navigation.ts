@@ -15,6 +15,7 @@ import {
   Briefcase,
   FolderOpen,
   Bell,
+  Handshake,
   type LucideIcon,
 } from 'lucide-react';
 import type { NavKey } from '@/lib/i18n/messages';
@@ -50,23 +51,8 @@ export const navModules: NavModule[] = [
     ring: 'ring-sky-200/70',
     children: [
       { key: 'contractsList', href: '/dashboard/contracts' },
-      { key: 'foreignContracts', href: '/dashboard/contracts/foreign-summary' },
       { key: 'parties', href: '/dashboard/parties' },
-      { key: 'contractsNew', href: '/dashboard/contracts/new' },
-    ],
-  },
-  {
-    key: 'imports',
-    descKey: 'importsDesc',
-    icon: Ship,
-    accent: 'text-cyan-600',
-    soft: 'from-cyan-500/15 to-cyan-500/5',
-    ring: 'ring-cyan-200/70',
-    children: [
-      { key: 'foreignArrivals', href: '/dashboard/foreign-arrivals' },
-      { key: 'goodsArrivals', href: '/dashboard/goods-arrivals' },
-      { key: 'dieselGydro', href: '/dashboard/shipments/gydro' },
-      { key: 'transit', href: '/dashboard/transport/transit' },
+      { key: 'foreignContracts', href: '/dashboard/contracts/foreign-summary' },
     ],
   },
   {
@@ -84,6 +70,35 @@ export const navModules: NavModule[] = [
     ],
   },
   {
+    key: 'warehouses',
+    descKey: 'warehousesDesc',
+    icon: Warehouse,
+    accent: 'text-amber-600',
+    soft: 'from-amber-500/15 to-amber-500/5',
+    ring: 'ring-amber-200/70',
+    children: [
+      { key: 'warehousesList', href: '/dashboard/warehouses' },
+      { key: 'inventory', href: '/dashboard/inventory' },
+      { key: 'transfers', href: '/dashboard/warehouses/transfers' },
+      { key: 'tanks', href: '/dashboard/warehouses/tanks' },
+      { key: 'stocktake', href: '/dashboard/warehouses/stocktake' },
+    ],
+  },
+  {
+    key: 'imports',
+    descKey: 'importsDesc',
+    icon: Ship,
+    accent: 'text-cyan-600',
+    soft: 'from-cyan-500/15 to-cyan-500/5',
+    ring: 'ring-cyan-200/70',
+    children: [
+      { key: 'foreignArrivals', href: '/dashboard/foreign-arrivals' },
+      { key: 'goodsArrivals', href: '/dashboard/goods-arrivals' },
+      { key: 'dieselGydro', href: '/dashboard/shipments/gydro' },
+      { key: 'transit', href: '/dashboard/transport/transit' },
+    ],
+  },
+  {
     key: 'sales',
     descKey: 'salesDesc',
     icon: TrendingUp,
@@ -95,6 +110,7 @@ export const navModules: NavModule[] = [
       { key: 'salesInvoices', href: '/dashboard/sales/invoices' },
       { key: 'salesDeliveries', href: '/dashboard/sales/deliveries' },
       { key: 'salesReturns', href: '/dashboard/sales/returns' },
+      { key: 'salesResales', href: '/dashboard/sales/resales' },
     ],
   },
   {
@@ -112,6 +128,15 @@ export const navModules: NavModule[] = [
     ],
   },
   {
+    key: 'representatives',
+    descKey: 'representativesDesc',
+    icon: Handshake,
+    accent: 'text-fuchsia-600',
+    soft: 'from-fuchsia-500/15 to-fuchsia-500/5',
+    ring: 'ring-fuchsia-200/70',
+    children: [{ key: 'representativesList', href: '/dashboard/representatives' }],
+  },
+  {
     key: 'suppliers',
     descKey: 'suppliersDesc',
     icon: Building2,
@@ -121,21 +146,6 @@ export const navModules: NavModule[] = [
     children: [
       { key: 'suppliersList', href: '/dashboard/suppliers' },
       { key: 'payables', href: '/dashboard/finance/payables' },
-    ],
-  },
-  {
-    key: 'warehouses',
-    descKey: 'warehousesDesc',
-    icon: Warehouse,
-    accent: 'text-amber-600',
-    soft: 'from-amber-500/15 to-amber-500/5',
-    ring: 'ring-amber-200/70',
-    children: [
-      { key: 'warehousesList', href: '/dashboard/warehouses' },
-      { key: 'inventory', href: '/dashboard/inventory' },
-      { key: 'transfers', href: '/dashboard/warehouses/transfers' },
-      { key: 'tanks', href: '/dashboard/warehouses/tanks' },
-      { key: 'stocktake', href: '/dashboard/warehouses/stocktake' },
     ],
   },
   {

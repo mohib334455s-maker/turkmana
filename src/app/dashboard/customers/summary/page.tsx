@@ -19,8 +19,10 @@ import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { TableEmpty } from '@/components/shared/table-empty';
 import { COMPANY_LABELS, useCompanyStore } from '@/lib/company-store';
-import { customerLedgers, customers, goodsValue, products, sumGoods } from '@/lib/demo-data';
+import { goodsValue, products, sumGoods } from '@/lib/demo-data';
+import { useOpsStore } from '@/lib/ops-store';
 import { balanceClass, formatCurrency, formatNumber } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/store';
 
 function statusBadge(cash: number) {
   return (
@@ -30,8 +32,11 @@ function statusBadge(cash: number) {
   );
 }
 
-function productMatrixFromLedger(customerId: number) {
-  const ledger = customerLedgers[customerId] ?? [];
+function productMatrixFromLedger(
+  ledgers: Record<number, { product: string; qty: number; loading: number; goodsBalance: number }[]>,
+  customerId: number
+) {
+  const ledger = ledgers[customerId] ?? [];
   const map = new Map<string, { purchase: number; loading: number; remaining: number }>();
 
   ledger.forEach((r) => {
@@ -48,13 +53,16 @@ function productMatrixFromLedger(customerId: number) {
 }
 
 export default function CustomersSummaryPage() {
+  const { t } = useI18n();
   const { company } = useCompanyStore();
+  const customers = useOpsStore((s) => s.customers);
+  const ledgers = useOpsStore((s) => s.customerLedgers);
   const colSpan = 6 + products.length;
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="مشتریان شرکت و خلاصه جنس"
+        title={t('pageCustomersSummary')}
         description={`وضعیت حساب مشتری در هر دو شرکت + ماتریس خرید/بارگیری/باقی — فیلتر: ${COMPANY_LABELS[company]}`}
         actions={
           <>
@@ -258,7 +266,7 @@ export default function CustomersSummaryPage() {
         </CardHeader>
         <CardContent className="space-y-4 px-0 pb-4">
           {customers.map((c) => {
-            const matrix = productMatrixFromLedger(c.id);
+            const matrix = productMatrixFromLedger(ledgers, c.id);
             const entries = [...matrix.entries()];
             if (!entries.length) return null;
             return (

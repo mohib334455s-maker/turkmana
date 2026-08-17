@@ -67,6 +67,13 @@ const themes: Record<string, NavIconTheme> = {
     cardBg: 'from-violet-50/60 to-white', cardBorder: 'border-violet-100 hover:border-violet-200',
     dot: 'bg-violet-400', childActive: 'bg-violet-50 text-violet-800 border-violet-100',
   },
+  representatives: {
+    iconBg: 'bg-fuchsia-50', iconText: 'text-fuchsia-600', iconBorder: 'border-fuchsia-100',
+    activeIconBg: 'bg-fuchsia-100', activeIconText: 'text-fuchsia-700', activeIconBorder: 'border-fuchsia-200',
+    navActiveBg: 'bg-fuchsia-50', navActiveText: 'text-fuchsia-900',
+    cardBg: 'from-fuchsia-50/60 to-white', cardBorder: 'border-fuchsia-100 hover:border-fuchsia-200',
+    dot: 'bg-fuchsia-400', childActive: 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-100',
+  },
   suppliers: {
     iconBg: 'bg-indigo-50', iconText: 'text-indigo-600', iconBorder: 'border-indigo-100',
     activeIconBg: 'bg-indigo-100', activeIconText: 'text-indigo-700', activeIconBorder: 'border-indigo-200',
@@ -151,6 +158,7 @@ const topBars: Record<string, string> = {
   purchases: 'bg-orange-500',
   sales: 'bg-emerald-500',
   customers: 'bg-violet-500',
+  representatives: 'bg-fuchsia-500',
   suppliers: 'bg-indigo-500',
   warehouses: 'bg-amber-500',
   transport: 'bg-blue-500',

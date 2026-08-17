@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -29,9 +29,11 @@ import { ExportButtons } from '@/components/shared/export-buttons';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { customerTxnLabels, resaleProfitPerTon } from '@/lib/customer-ledger';
-import { customerLedgers, products } from '@/lib/demo-data';
+import { customerTxnLabels } from '@/lib/customer-ledger';
+import { products } from '@/lib/demo-data';
 import { useOpsStore } from '@/lib/ops-store';
+import { CustomerResaleDialog, CustomerSaleDialog } from '@/components/customers/customer-trade-dialogs';
+import { RelatedJournal } from '@/components/journal/related-journal';
 import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
 
 const txnBadgeVariant = (txnType: string) => {
@@ -50,8 +52,17 @@ export default function CustomerLedgerPage({
   const customerId = Number(id);
   const { company } = useCompanyStore();
   const customer = useOpsStore((s) => s.customers.find((c) => c.id === customerId));
-  const ledger = (customerLedgers[customerId] ?? []).filter((r) =>
+  const ledgers = useOpsStore((s) => s.customerLedgers);
+  const customerLots = useOpsStore((s) => s.customerGoodsLots);
+  const resales = useOpsStore((s) => s.goodsResales);
+  const ledger = (ledgers[customerId] ?? []).filter((r) =>
     matchesCompany(r.company, company)
+  );
+  const [saleOpen, setSaleOpen] = useState(false);
+  const [resaleOpen, setResaleOpen] = useState(false);
+  const openLots = useMemo(
+    () => customerLots.filter((l) => l.customerId === customerId && l.qtyRemaining > 0),
+    [customerLots, customerId]
   );
 
   if (!customer) {
@@ -68,9 +79,9 @@ export default function CustomerLedgerPage({
   const cashBalance = ledger.at(-1)?.cashBalance ?? 0;
   const goodsBalance = ledger.at(-1)?.goodsBalance ?? 0;
   const resaleRows = ledger.filter((r) => r.txnType === 'resale' || r.txnType === 'takeback');
-  const resaleProfit = ledger
-    .filter((r) => r.txnType === 'resale' && r.sourceUnitPrice)
-    .reduce((sum, r) => sum + resaleProfitPerTon(r.sourceUnitPrice!, r.unitPrice) * r.qty, 0);
+  const resaleProfit = resales
+    .filter((r) => r.sourceCustomerId === customerId)
+    .reduce((sum, r) => sum + r.totalProfit, 0);
 
   const summaryByProduct = products.map((p) => {
     const rows = ledger.filter((r) => r.product === p.name);
@@ -159,9 +170,13 @@ export default function CustomerLedgerPage({
                 <Printer className="ml-2 h-4 w-4" />
                 چاپ
               </Button>
-              <Button size="sm">
+              <Button size="sm" variant="outline" onClick={() => setResaleOpen(true)}>
                 <Plus className="ml-2 h-4 w-4" />
-                معامله جدید
+                فروش مجدد
+              </Button>
+              <Button size="sm" onClick={() => setSaleOpen(true)}>
+                <Plus className="ml-2 h-4 w-4" />
+                فروش کالا
               </Button>
               <Link href="/dashboard/customers">
                 <Button variant="outline" size="sm">
@@ -198,16 +213,24 @@ export default function CustomerLedgerPage({
         </div>
       </section>
 
-      {resaleRows.length > 0 ? (
+      {resaleRows.length > 0 || openLots.length > 0 ? (
         <Card className="rounded-[22px] border-amber-200 bg-amber-50/40">
           <CardContent className="p-4 text-sm text-amber-950">
             <p className="font-bold">فروش مجدد کالای مشتری</p>
             <p className="mt-1 leading-relaxed">
               مشتری ممکن است کالا بخرد و سپس همان مقدار از حساب جنسی او استرداد و به مشتری دیگر با قیمت بالاتر فروخته شود.
             </p>
-            {resaleProfit > 0 ? (
+            {openLots.length > 0 ? (
+              <p className="mt-2 text-sm">
+                موجودی قابل فروش مجدد:{' '}
+                {openLots
+                  .map((l) => `${l.productName} ${l.qtyRemaining} ${l.unit} فی ${formatCurrency(l.unitPrice)}`)
+                  .join('، ')}
+              </p>
+            ) : null}
+            {resaleProfit !== 0 ? (
               <p className="mt-2 font-semibold num">
-                سود تقریبی شرکت از فروش مجدد: {formatCurrency(resaleProfit)}
+                سود / ضرر شرکت از فروش مجدد این مشتری: {formatCurrency(resaleProfit)}
               </p>
             ) : null}
           </CardContent>
@@ -423,6 +446,44 @@ export default function CustomerLedgerPage({
               />
             </CardContent>
           </Card>
+
+          {openLots.length > 0 ? (
+            <Card className="mt-4 overflow-hidden rounded-[22px] border-slate-100">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">لات‌های قابل فروش مجدد</CardTitle>
+              </CardHeader>
+              <CardContent className="px-0 pb-4">
+                <div className="table-scroll">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>جنس</TableHead>
+                        <TableHead>مقدار اصلی</TableHead>
+                        <TableHead>باقی</TableHead>
+                        <TableHead>فیات خرید مشتری</TableHead>
+                        <TableHead>تاریخ</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {openLots.map((l) => (
+                        <TableRow key={l.id}>
+                          <TableCell>{l.productName}</TableCell>
+                          <TableCell className="num">
+                            {formatNumber(l.qtyOriginal, 3)} {l.unit}
+                          </TableCell>
+                          <TableCell className="num font-semibold">
+                            {formatNumber(l.qtyRemaining, 3)} {l.unit}
+                          </TableCell>
+                          <TableCell className="num">{formatCurrency(l.unitPrice)}</TableCell>
+                          <TableCell className="num">{l.date}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="info">
@@ -474,6 +535,15 @@ export default function CustomerLedgerPage({
           </div>
         </TabsContent>
       </Tabs>
+
+      <RelatedJournal filter={{ customerId }} />
+
+      <CustomerSaleDialog open={saleOpen} onClose={() => setSaleOpen(false)} customerId={customerId} />
+      <CustomerResaleDialog
+        open={resaleOpen}
+        onClose={() => setResaleOpen(false)}
+        sourceCustomerId={customerId}
+      />
     </div>
   );
 }

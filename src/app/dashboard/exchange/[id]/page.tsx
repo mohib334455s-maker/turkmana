@@ -20,8 +20,12 @@ import { ExportButtons } from '@/components/shared/export-buttons';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { exchangeHouses, exchangeTransactions } from '@/lib/demo-data';
+import { exchangeTransactions, type ExchangeHouse } from '@/lib/demo-data';
+import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import { balanceClass, formatCurrency, formatNumber } from '@/lib/utils';
+import { RelatedJournal } from '@/components/journal/related-journal';
+
+const EMPTY: OpsRow[] = [];
 
 export default function ExchangeDetailPage({
   params,
@@ -31,7 +35,10 @@ export default function ExchangeDetailPage({
   const { id } = use(params);
   const houseId = Number(id);
   const { company } = useCompanyStore();
-  const house = exchangeHouses.find((h) => h.id === houseId);
+  const houses = useOpsStore(
+    (s) => (s.lists.exchangeHouses ?? EMPTY) as unknown as ExchangeHouse[]
+  );
+  const house = houses.find((h) => h.id === houseId);
   const txns = (exchangeTransactions[houseId] ?? []).filter((t) =>
     matchesCompany(t.company, company)
   );
@@ -270,6 +277,7 @@ export default function ExchangeDetailPage({
           );
         })}
       </Tabs>
+      <RelatedJournal filter={{ exchangeId: houseId }} />
     </div>
   );
 }

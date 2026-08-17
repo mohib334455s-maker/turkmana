@@ -20,6 +20,8 @@ import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import type { ForeignArrivalRecord, GoodsArrivalRecord, PartyRecord } from '@/lib/demo-data';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { ExportButtons } from '@/components/shared/export-buttons';
+import { RelatedJournal } from '@/components/journal/related-journal';
+import { isContractOpenForExpenses } from '@/lib/permissions';
 
 const EMPTY: OpsRow[] = [];
 
@@ -31,6 +33,7 @@ export default function ContractDetailPage({
   const { id } = use(params);
   const contractId = Number(id);
   const contract = useOpsStore((s) => s.contracts.find((c) => c.id === contractId));
+  const updateContract = useOpsStore((s) => s.updateContract);
   const contractParties = useOpsStore(
     (s) => ((s.lists.parties ?? EMPTY) as unknown as PartyRecord[]).filter((p) => p.contractId === contractId)
   );
@@ -109,15 +112,32 @@ export default function ContractDetailPage({
                 بازگشت
               </Button>
             </Link>
+            <Button
+              variant={isContractOpenForExpenses(contract.status) ? 'outline' : 'default'}
+              size="sm"
+              onClick={() =>
+                updateContract(contract.id, {
+                  status: isContractOpenForExpenses(contract.status) ? 'inactive' : 'active',
+                })
+              }
+            >
+              {isContractOpenForExpenses(contract.status) ? 'غیرفعال کردن' : 'فعال کردن'}
+            </Button>
           </>
         }
       />
+
+      {!isContractOpenForExpenses(contract.status) ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          این قرارداد غیرفعال است — مفاد و ضرر بسته شده و ثبت مصارف جدید روی آن مجاز نیست.
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ['مقدار کل', `${formatNumber(contract.totalQty, 0)} تن`],
           ['قیمت واحد', formatCurrency(contract.pricePerUnit)],
-          ['وضعیت', contract.status === 'active' ? 'فعال' : contract.status],
+          ['وضعیت', isContractOpenForExpenses(contract.status) ? 'فعال' : 'غیرفعال'],
           ['شرکت', contract.company === 'arya' ? 'آریا' : 'ترکمن'],
         ].map(([label, value]) => (
           <Card key={String(label)}>
@@ -307,6 +327,8 @@ export default function ContractDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <RelatedJournal filter={{ contractId: contract.id }} />
 
       <p className="text-xs text-slate-500">
         زنجیره: Contract → Party → Shipment → Warehouse

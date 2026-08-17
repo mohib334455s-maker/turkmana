@@ -19,8 +19,35 @@ import {
   sumForeignExpenses,
 } from '@/lib/calculations/profit-loss';
 import { balanceClass, formatCurrency, formatNumber } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/store';
+import { useAuthStore } from '@/lib/auth-store';
+import { canViewProfitLoss, isContractOpenForExpenses, usePermissionsStore } from '@/lib/permissions';
+import { useOpsStore } from '@/lib/ops-store';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function ProfitLossPage() {
+  const { t, tx } = useI18n();
+  const role = useAuthStore((s) => s.role);
+  const allowed = usePermissionsStore((s) => s.profitLossRoles);
+  const contracts = useOpsStore((s) => s.contracts);
+
+  if (!canViewProfitLoss(role, allowed)) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <PageHeader title={t('pageProfitLoss')} />
+        <Card>
+          <CardContent className="p-6 text-sm leading-7 text-slate-600">
+            {tx(
+              'صلاحیت مشاهده مفاد و ضرر برای حساب شما قید نشده است. ادمین باید این دسترسی را در نقش‌ها باز کند.',
+              'Profit & loss is not granted on your account. An admin must enable this in Roles.'
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const computed = demoProfitLossRows.map((row) => ({
     row,
     result: calculateProfitLoss(row),
@@ -50,7 +77,7 @@ export default function ProfitLossPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="جزئیات بهای تمام‌شده، مفاد و ضرر"
+        title={t('pageProfitLoss')}
         description="مقدار/مبلغ/اوسط خرید · مصارف خارجی و داخلی · ضایعات · قیمت تمام‌شده · فروش · مفاد/ضرر فی تن · P&L نهایی · سنجش موجودی با نرخ روز"
         actions={
           <ExportButtons
@@ -91,6 +118,52 @@ export default function ProfitLossPage() {
           />
         }
       />
+
+      {contracts.length ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">
+              {tx('قراردادها — مفاد و ضرر', 'Contracts — P&L status')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {contracts.map((c) => {
+              const open = isContractOpenForExpenses(c.status);
+              return (
+                <div
+                  key={c.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2"
+                >
+                  <div>
+                    <p className="font-semibold">
+                      {c.number} — {c.product}
+                    </p>
+                    <p className="text-xs text-slate-500">{c.supplierName}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={open ? 'success' : 'warning'}>
+                      {open
+                        ? tx('فعال — باز', 'Active — open')
+                        : tx('غیرفعال — بسته', 'Inactive — closed')}
+                    </Badge>
+                    <Link href={`/dashboard/contracts/${c.id}`}>
+                      <Button size="sm" variant="outline">
+                        {tx('قرارداد', 'Contract')}
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+            <p className="pt-1 text-xs text-slate-500">
+              {tx(
+                'با تیک غیرفعال، مفاد و ضرر همان قرارداد بسته می‌شود و کسی مصارف جدید روی آن ثبت نمی‌کند.',
+                'Ticking a contract inactive closes its P&L and blocks new expense postings.'
+              )}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {computed.length === 0 ? (
         <Card>

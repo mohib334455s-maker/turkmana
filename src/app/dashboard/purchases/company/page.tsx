@@ -1,9 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -17,18 +19,46 @@ import { ExportButtons } from '@/components/shared/export-buttons';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { TableEmpty } from '@/components/shared/table-empty';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
+import { PurchaseStatusBadge, useCompanyName } from '@/components/purchases/purchase-status-badge';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { companyPurchases, contracts } from '@/lib/demo-data';
+import { useI18n } from '@/lib/i18n/store';
+import { useOpsStore } from '@/lib/ops-store';
+import { todayIso } from '@/lib/purchase-flow';
 import { formatCurrency, formatNumber } from '@/lib/utils';
-import { BiLabel } from '@/components/shared/bi-label';
+import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
 
-function contractHref(contractNumber: string) {
-  const found = contracts.find((c) => c.number === contractNumber);
-  return found ? `/dashboard/contracts/${found.id}` : '/dashboard/contracts';
-}
-export default function CompanyPurchasesPage() {
+function CompanyPurchasesInner() {
+  const { t } = useI18n();
+  const companyName = useCompanyName();
   const { company } = useCompanyStore();
-  const rows = companyPurchases.filter((p) => matchesCompany(p.company, company));
+  const searchParams = useSearchParams();
+  const orders = useOpsStore((s) => s.purchaseOrders);
+  const rowsAll = useOpsStore((s) => s.companyPurchases);
+  const createFromOrder = useOpsStore((s) => s.createCompanyPurchaseFromOrder);
+  const [open, setOpen] = useState(false);
+
+  const rows = useMemo(
+    () => rowsAll.filter((p) => matchesCompany(p.company, company)),
+    [rowsAll, company]
+  );
+
+  const eligible = useMemo(
+    () =>
+      orders.filter(
+        (o) =>
+          o.status !== 'cancelled' &&
+          o.status !== 'completed' &&
+          matchesCompany(o.company, company) &&
+          !rowsAll.some((p) => p.purchaseOrderId === o.id && p.status !== 'cancelled')
+      ),
+    [orders, rowsAll, company]
+  );
+
+  const fromOrder = searchParams.get('fromOrder');
+  useEffect(() => {
+    if (fromOrder && eligible.some((o) => String(o.id) === fromOrder)) setOpen(true);
+  }, [fromOrder, eligible]);
 
   const totals = useMemo(
     () =>
@@ -43,46 +73,61 @@ export default function CompanyPurchasesPage() {
     [rows]
   );
 
+  const selected = eligible.find((o) => String(o.id) === fromOrder) ?? eligible[0];
+
   return (
     <div className="space-y-6 animate-fade-in">
+      <FlowLinks
+        steps={PURCHASE_FLOW_STEPS.map((s) => ({
+          ...s,
+          active: s.href === '/dashboard/purchases/company',
+        }))}
+      />
+
       <PageHeader
-        title="خریداری‌های شرکت"
-        description="خریدهای شرکت — فروشنده، قرارداد، مقدار، نرخ، هزینه‌ها و وضعیت پرداخت/دریافت"
+        title={t('cpTitle')}
+        description={t('cpDesc')}
         actions={
           <>
             <ExportButtons
               filename="company-purchases"
-              title="خریداری‌های شرکت"
+              title={t('cpTitle')}
               columns={[
-                { key: 'number', label: 'شماره' },
-                { key: 'dateJalali', label: 'تاریخ' },
-                { key: 'seller', label: 'فروشنده' },
-                { key: 'contract', label: 'قرارداد' },
-                { key: 'product', label: 'نوع جنس' },
-                { key: 'location', label: 'محل' },
-                { key: 'qty', label: 'مقدار' },
-                { key: 'unit', label: 'واحد' },
-                { key: 'rate', label: 'نرخ' },
-                { key: 'amount', label: 'مبلغ' },
-                { key: 'currency', label: 'ارز' },
-                { key: 'freight', label: 'هزینه حمل' },
-                { key: 'otherCosts', label: 'سایر مصارف' },
-                { key: 'paid', label: 'پرداخت‌شده' },
-                { key: 'balance', label: 'باقی‌مانده' },
-                { key: 'payStatus', label: 'وضعیت پرداخت' },
-                { key: 'goodsStatus', label: 'وضعیت دریافت' },
-                { key: 'notes', label: 'ملاحظات' },
+                { key: 'number', label: t('colOrderNo') },
+                { key: 'poCode', label: t('colLinkedOrder') },
+                { key: 'date', label: t('colDate') },
+                { key: 'seller', label: t('colSupplier') },
+                { key: 'product', label: t('colProduct') },
+                { key: 'qty', label: t('colQty') },
+                { key: 'rate', label: t('colRate') },
+                { key: 'amount', label: t('colAmount') },
+                { key: 'paid', label: t('colPaid') },
+                { key: 'balance', label: t('colBalance') },
+                { key: 'status', label: t('colStatus') },
               ]}
               rows={rows}
             />
             <CompanySwitcher />
+            <Button onClick={() => setOpen(true)} disabled={eligible.length === 0}>
+              <Plus className="ms-2 h-4 w-4" />
+              {t('createFromOrder')}
+            </Button>
           </>
         }
       />
 
+      {eligible.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          {t('noEligibleOrders')}{' '}
+          <Link href="/dashboard/purchases" className="text-[var(--brand)] underline">
+            {t('poTitle')}
+          </Link>
+        </p>
+      ) : null}
+
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">لیست خریداری‌های شرکت</CardTitle>
+          <CardTitle className="text-base">{t('cpTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-4 lg:pb-0">
           <ResponsiveData
@@ -91,52 +136,50 @@ export default function CompanyPurchasesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead><BiLabel fa="شماره" en="No." /></TableHead>
-                      <TableHead><BiLabel fa="تاریخ" en="Date" /></TableHead>
-                      <TableHead><BiLabel fa="فروشنده" en="Seller" /></TableHead>
-                      <TableHead><BiLabel fa="قرارداد" en="Contract" /></TableHead>
-                      <TableHead><BiLabel fa="نوع جنس" en="Product" /></TableHead>
-                      <TableHead><BiLabel fa="محل" en="Location" /></TableHead>
-                      <TableHead><BiLabel fa="مقدار" en="Qty" /></TableHead>
-                      <TableHead><BiLabel fa="واحد" en="Unit" /></TableHead>
-                      <TableHead><BiLabel fa="نرخ خرید" en="Rate" /></TableHead>
-                      <TableHead><BiLabel fa="مبلغ" en="Amount" /></TableHead>
-                      <TableHead><BiLabel fa="ارز" en="Currency" /></TableHead>
-                      <TableHead><BiLabel fa="هزینه حمل" en="Freight" /></TableHead>
-                      <TableHead><BiLabel fa="سایر مصارف" en="Other costs" /></TableHead>
-                      <TableHead><BiLabel fa="پرداخت‌شده" en="Paid" /></TableHead>
-                      <TableHead><BiLabel fa="باقی‌مانده" en="Balance" /></TableHead>
-                      <TableHead><BiLabel fa="وضعیت پرداخت" en="Pay status" /></TableHead>
-                      <TableHead><BiLabel fa="وضعیت دریافت جنس" en="Goods status" /></TableHead>
-                      <TableHead><BiLabel fa="ملاحظات" en="Notes" /></TableHead>
+                      <TableHead>{t('colOrderNo')}</TableHead>
+                      <TableHead>{t('colLinkedOrder')}</TableHead>
+                      <TableHead>{t('colDate')}</TableHead>
+                      <TableHead>{t('colSupplier')}</TableHead>
+                      <TableHead>{t('colProduct')}</TableHead>
+                      <TableHead>{t('colLocation')}</TableHead>
+                      <TableHead>{t('colQty')}</TableHead>
+                      <TableHead>{t('colRate')}</TableHead>
+                      <TableHead>{t('colAmount')}</TableHead>
+                      <TableHead>{t('colFreight')}</TableHead>
+                      <TableHead>{t('colOtherCosts')}</TableHead>
+                      <TableHead>{t('colPaid')}</TableHead>
+                      <TableHead>{t('colBalance')}</TableHead>
+                      <TableHead>{t('colCompany')}</TableHead>
+                      <TableHead>{t('colStatus')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {rows.length === 0 ? (
-                      <TableEmpty colSpan={18} message="هنوز خریداری ثبت نشده است" />
+                      <TableEmpty colSpan={15} message={t('noCompanyPurchases')} />
                     ) : null}
                     {rows.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell className="font-semibold num">{r.number}</TableCell>
-                        <TableCell className="num">{r.dateJalali}</TableCell>
-                        <TableCell>{r.seller}</TableCell>
                         <TableCell>
-                          <Link
-                            href={contractHref(r.contract)}
-                            className="text-[var(--brand)] hover:underline num"
-                          >
-                            {r.contract}
+                          <Link href="/dashboard/purchases" className="num text-[var(--brand)] hover:underline">
+                            {r.poCode}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="num">{r.date}</TableCell>
+                        <TableCell>
+                          <Link href={`/dashboard/suppliers/${r.supplierId}`} className="hover:text-teal-700">
+                            {r.seller}
                           </Link>
                         </TableCell>
                         <TableCell>{r.product}</TableCell>
-                        <TableCell>{r.location}</TableCell>
-                        <TableCell className="num">{formatNumber(r.qty, 0)}</TableCell>
-                        <TableCell>{r.unit}</TableCell>
+                        <TableCell>{r.location || '—'}</TableCell>
+                        <TableCell className="num">
+                          {formatNumber(r.qty, 0)} {r.unit}
+                        </TableCell>
                         <TableCell className="num">{formatCurrency(r.rate, r.currency)}</TableCell>
                         <TableCell className="num font-semibold">
                           {formatCurrency(r.amount, r.currency)}
                         </TableCell>
-                        <TableCell className="num">{r.currency}</TableCell>
                         <TableCell className="num">{formatCurrency(r.freight, r.currency)}</TableCell>
                         <TableCell className="num">{formatCurrency(r.otherCosts, r.currency)}</TableCell>
                         <TableCell className="num text-emerald-700">
@@ -145,27 +188,24 @@ export default function CompanyPurchasesPage() {
                         <TableCell className="num text-amber-700 font-semibold">
                           {formatCurrency(r.balance, r.currency)}
                         </TableCell>
+                        <TableCell>{companyName(r.company)}</TableCell>
                         <TableCell>
-                          <Badge variant="muted">{r.payStatus}</Badge>
+                          <PurchaseStatusBadge status={r.status} />
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="info">{r.goodsStatus}</Badge>
-                        </TableCell>
-                        <TableCell>{r.notes || '-'}</TableCell>
                       </TableRow>
                     ))}
                     {rows.length > 0 ? (
                       <TableRow className="bg-slate-50 font-semibold">
-                        <TableCell colSpan={9}>جمع</TableCell>
+                        <TableCell colSpan={8}>{t('colAmount')}</TableCell>
                         <TableCell className="num">{formatCurrency(totals.amount)}</TableCell>
-                        <TableCell colSpan={3} />
+                        <TableCell colSpan={2} />
                         <TableCell className="num text-emerald-700">
                           {formatCurrency(totals.paid)}
                         </TableCell>
                         <TableCell className="num text-amber-700">
                           {formatCurrency(totals.balance)}
                         </TableCell>
-                        <TableCell colSpan={3} />
+                        <TableCell colSpan={2} />
                       </TableRow>
                     ) : null}
                   </TableBody>
@@ -174,57 +214,92 @@ export default function CompanyPurchasesPage() {
             }
             cards={
               rows.length === 0 ? (
-                <p className="py-10 text-center text-sm text-slate-500">هنوز خریداری ثبت نشده است</p>
+                <p className="py-10 text-center text-sm text-slate-500">{t('noCompanyPurchases')}</p>
               ) : (
-                <>
-                  {rows.map((r) => (
-                    <MobileRecordCard
-                      key={r.id}
-                      title={r.number}
-                      subtitle={`${r.seller} · ${r.dateJalali}`}
-                      badge={<Badge variant="muted">{r.payStatus}</Badge>}
-                      metrics={[
-                        { label: 'مبلغ', value: formatCurrency(r.amount, r.currency) },
-                        { label: 'پرداخت‌شده', value: formatCurrency(r.paid, r.currency) },
-                        { label: 'باقی‌مانده', value: formatCurrency(r.balance, r.currency) },
-                        { label: 'مقدار', value: `${formatNumber(r.qty, 0)} ${r.unit}` },
-                      ]}
-                      extra={
-                        <>
-                          <ExtraRow label="قرارداد" value={r.contract} />
-                          <ExtraRow label="نوع جنس" value={r.product} />
-                          <ExtraRow label="محل" value={r.location} />
-                          <ExtraRow label="نرخ" value={formatCurrency(r.rate, r.currency)} />
-                          <ExtraRow label="حمل" value={formatCurrency(r.freight, r.currency)} />
-                          <ExtraRow label="سایر" value={formatCurrency(r.otherCosts, r.currency)} />
-                          <ExtraRow label="دریافت" value={r.goodsStatus} />
-                          <ExtraRow label="ملاحظات" value={r.notes || '-'} />
-                        </>
-                      }
-                    />
-                  ))}
-                  <Card>
-                    <CardContent className="grid grid-cols-3 gap-2 p-4 text-sm">
-                      <div>
-                        <p className="text-xs text-slate-500">جمع مبلغ</p>
-                        <p className="font-bold num">{formatCurrency(totals.amount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">جمع پرداخت</p>
-                        <p className="font-bold num text-emerald-700">{formatCurrency(totals.paid)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">جمع باقی</p>
-                        <p className="font-bold num text-amber-700">{formatCurrency(totals.balance)}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
+                rows.map((r) => (
+                  <MobileRecordCard
+                    key={r.id}
+                    title={r.number}
+                    subtitle={`${r.seller} · ${r.date}`}
+                    badge={<PurchaseStatusBadge status={r.status} />}
+                    metrics={[
+                      { label: t('colAmount'), value: formatCurrency(r.amount, r.currency) },
+                      { label: t('colPaid'), value: formatCurrency(r.paid, r.currency) },
+                      { label: t('colBalance'), value: formatCurrency(r.balance, r.currency) },
+                      { label: t('colQty'), value: `${formatNumber(r.qty, 0)} ${r.unit}` },
+                    ]}
+                    extra={
+                      <>
+                        <ExtraRow label={t('colLinkedOrder')} value={r.poCode} />
+                        <ExtraRow label={t('colProduct')} value={r.product} />
+                        <ExtraRow label={t('colLocation')} value={r.location || '—'} />
+                      </>
+                    }
+                  />
+                ))
               )
             }
           />
         </CardContent>
       </Card>
+
+      <CompactFormDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t('receiveGoods')}
+        description={t('cpDesc')}
+        fields={[
+          {
+            key: 'purchaseOrderId',
+            label: t('colLinkedOrder'),
+            type: 'select',
+            required: true,
+            options: eligible.map((o) => ({
+              value: String(o.id),
+              label: `${o.code} — ${o.supplier} — ${o.product}`,
+            })),
+          },
+          { key: 'date', label: t('colDate'), type: 'date', required: true },
+          { key: 'qty', label: t('receivedQty'), type: 'number', required: true },
+          { key: 'location', label: t('colLocation') },
+          { key: 'contract', label: t('colContract') },
+          { key: 'freight', label: t('colFreight'), type: 'number' },
+          { key: 'otherCosts', label: t('colOtherCosts'), type: 'number' },
+          { key: 'paid', label: t('colPaid'), type: 'number' },
+          { key: 'notes', label: t('colNotes') },
+        ]}
+        initial={{
+          purchaseOrderId: selected ? String(selected.id) : '',
+          date: todayIso(),
+          qty: selected ? String(selected.qty) : '',
+          freight: '0',
+          otherCosts: '0',
+          paid: '0',
+        }}
+        submitLabel={t('save')}
+        onSubmit={(values) => {
+          createFromOrder({
+            purchaseOrderId: Number(values.purchaseOrderId),
+            date: values.date || todayIso(),
+            qty: Number(values.qty || 0),
+            freight: Number(values.freight || 0),
+            otherCosts: Number(values.otherCosts || 0),
+            paid: Number(values.paid || 0),
+            location: values.location || '',
+            contract: values.contract || '',
+            notes: values.notes || '',
+          });
+        }}
+      />
     </div>
+  );
+}
+
+export default function CompanyPurchasesPage() {
+  const { t } = useI18n();
+  return (
+    <Suspense fallback={<p className="p-8 text-sm text-slate-500">{t('loading')}</p>}>
+      <CompanyPurchasesInner />
+    </Suspense>
   );
 }

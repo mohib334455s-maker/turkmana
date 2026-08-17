@@ -19,15 +19,17 @@ import { TableEmpty } from '@/components/shared/table-empty';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
 import { foreignContractSummaries } from '@/lib/demo-data';
 import { formatNumber } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/store';
 
 export default function ForeignContractSummaryPage() {
+  const { t } = useI18n();
   const { company } = useCompanyStore();
   const rows = foreignContractSummaries.filter((r) => matchesCompany(r.company, company));
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="خلاصه قرارداد شرکت خارجی"
+        title={t('pageForeignContracts')}
         description="رول‌آپ قرارداد تأمین‌کننده خارجی — آمد، تخلیه، فروش، موجودی و باقی"
         actions={
           <>

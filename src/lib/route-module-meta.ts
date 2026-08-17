@@ -16,6 +16,7 @@ import {
   FileText,
   FolderOpen,
   GitBranch,
+  Handshake,
   Hourglass,
   Landmark,
   Layers,
@@ -54,6 +55,7 @@ const exactRoutes: Record<string, RouteModuleMeta> = {
   '/dashboard/customers/summary': { navKey: 'customers', icon: Layers },
   '/dashboard/profit-loss': { navKey: 'finance', icon: Scale },
   '/dashboard/customers': { navKey: 'customers', icon: Users },
+  '/dashboard/representatives': { navKey: 'representatives', icon: Handshake },
   '/dashboard/suppliers': { navKey: 'suppliers', icon: Building2 },
   '/dashboard/warehouses': { navKey: 'warehouses', icon: Warehouse },
   '/dashboard/contracts': { navKey: 'contracts', icon: FileText },
@@ -96,6 +98,7 @@ const exactRoutes: Record<string, RouteModuleMeta> = {
   '/dashboard/finance/ledger': { navKey: 'finance', icon: BookOpen },
   '/dashboard/finance/entries': { navKey: 'finance', icon: FileSpreadsheet },
   '/dashboard/finance/expenses': { navKey: 'finance', icon: Receipt },
+  '/dashboard/sales/resales': { navKey: 'sales', icon: TrendingUp },
 
   '/dashboard/exchange/currencies': { navKey: 'exchange', icon: Coins },
   '/dashboard/exchange/rates': { navKey: 'exchange', icon: TrendingUp },
@@ -141,6 +144,7 @@ const prefixRules: PrefixRule[] = [
   },
   { prefix: '/dashboard/exchange/', meta: { navKey: 'exchange', icon: Banknote } },
   { prefix: '/dashboard/goods-arrivals/', meta: { navKey: 'imports', icon: PackageOpen } },
+  { prefix: '/dashboard/finance/expenses/', meta: { navKey: 'finance', icon: Receipt } },
 ];
 
 export function getRouteModuleMeta(pathname: string): RouteModuleMeta | null {

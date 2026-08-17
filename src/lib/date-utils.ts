@@ -46,6 +46,23 @@ export function formatGregorianLong(date: Date = new Date()) {
   }).format(date);
 }
 
+export function formatJalaliWeekday(date: Date = new Date()) {
+  try {
+    return new Intl.DateTimeFormat('fa-AF-u-ca-persian', { weekday: 'long' }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { weekday: 'long' }).format(date);
+  }
+}
+
+export function parseIsoDate(iso: string) {
+  const d = new Date(`${iso}T12:00:00`);
+  return Number.isNaN(d.getTime()) ? new Date() : d;
+}
+
+export function gregorianFromIso(iso: string) {
+  return formatGregorian(parseIsoDate(iso));
+}
+
 export function dualDateLabel(date: Date = new Date()) {
   return {
     jalali: formatJalali(date),

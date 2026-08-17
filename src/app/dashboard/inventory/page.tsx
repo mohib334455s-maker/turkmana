@@ -18,8 +18,10 @@ import { TableEmpty } from '@/components/shared/table-empty';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
 import { products, warehouses } from '@/lib/demo-data';
 import { formatCurrency, formatNumber } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/store';
 
 export default function InventoryPage() {
+  const { t } = useI18n();
   const { company } = useCompanyStore();
   const rows = warehouses.filter((w) => matchesCompany(w.company, company));
 
@@ -36,13 +38,13 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="موجودی کل"
+        title={t('pageInventory')}
         description="موجودی، رزرو، آزاد و ارزش — تجمیع همه گدام‌ها"
         actions={
           <>
             <ExportButtons
               filename="inventory"
-              title="موجودی کل"
+              title={t('pageInventory')}
               columns={[
                 { key: 'name', label: 'کالا' },
                 { key: 'qty', label: 'موجودی' },

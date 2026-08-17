@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
 import { canManageUsers, useAuthStore } from '@/lib/auth-store';
+import { canViewProfitLoss, usePermissionsStore } from '@/lib/permissions';
 import type { NavKey } from '@/lib/i18n/messages';
 import {
   longestActiveChild,
@@ -38,12 +39,17 @@ export function Sidebar() {
   const closeTimer = useRef<number | null>(null);
   const isRtl = dir === 'rtl';
   const role = useAuthStore((s) => s.role);
+  const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
+  const pnlOk = canViewProfitLoss(role, profitLossRoles);
   const visibleModules = navModules.map((mod) => {
-    if (mod.key !== 'settings' || canManageUsers(role)) return mod;
-    return {
-      ...mod,
-      children: mod.children?.filter((c) => c.key !== 'users' && c.key !== 'roles'),
-    };
+    let children = mod.children;
+    if (mod.key === 'settings' && !canManageUsers(role)) {
+      children = children?.filter((c) => c.key !== 'users' && c.key !== 'roles');
+    }
+    if (mod.key === 'finance' && !pnlOk) {
+      children = children?.filter((c) => c.key !== 'profitLoss');
+    }
+    return children === mod.children ? mod : { ...mod, children };
   });
 
   useEffect(() => {

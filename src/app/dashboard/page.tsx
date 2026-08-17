@@ -16,14 +16,18 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { ExchangeAccountsCard } from '@/components/dashboard/exchange-accounts-card';
 import { KpiCardStack } from '@/components/dashboard/kpi-card-stack';
 import { OpsModuleCard } from '@/components/dashboard/ops-module-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
-import { useCompanyStore, COMPANY_LABELS } from '@/lib/company-store';
+import { useCompanyStore } from '@/lib/company-store';
 import { financialSummary, products } from '@/lib/demo-data';
 import { navModules } from '@/lib/navigation';
 import { formatCurrency } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/store';
+import { useAuthStore } from '@/lib/auth-store';
+import { canViewProfitLoss, usePermissionsStore } from '@/lib/permissions';
 
 const opsModules = navModules.filter((m) => m.key !== 'dashboard');
 
@@ -33,11 +37,17 @@ const monthBars: Array<{ name: string; purchase: number; sales: number }> = [];
 
 export default function DashboardPage() {
   const { company } = useCompanyStore();
+  const { t } = useI18n();
+  const role = useAuthStore((s) => s.role);
+  const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
+  const pnlOk = canViewProfitLoss(role, profitLossRoles);
   const fin = financialSummary[company];
+  const companyLabel =
+    company === 'arya' ? t('companyArya') : company === 'turkmen' ? t('companyTurkmen') : t('companyBoth');
 
   const kpiCards = [
     {
-      title: 'مشتریان فعال',
+      title: t('kpiCustomers'),
       value: '0',
       change: '۰',
       up: true,
@@ -46,7 +56,7 @@ export default function DashboardPage() {
       indicator: 'bg-violet-600',
     },
     {
-      title: 'ارزش کل موجودی',
+      title: t('kpiInventory'),
       value: formatCurrency(fin.inventoryValue),
       change: '۰',
       up: true,
@@ -55,7 +65,7 @@ export default function DashboardPage() {
       indicator: 'bg-teal-600',
     },
     {
-      title: 'بیلانس مشتریان',
+      title: t('colCashBalance'),
       value: formatCurrency(fin.customerBalance),
       change: '۰',
       up: true,
@@ -64,7 +74,7 @@ export default function DashboardPage() {
       indicator: 'bg-sky-600',
     },
     {
-      title: 'تعداد معاملات',
+      title: t('txnCount'),
       value: String(fin.txnCount),
       change: '۰',
       up: true,
@@ -72,15 +82,19 @@ export default function DashboardPage() {
       accent: 'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-950 border-amber-900/35',
       indicator: 'bg-amber-600',
     },
-    {
-      title: 'مفاد و ضرر',
-      value: formatCurrency(fin.profitLoss),
-      change: '۰',
-      up: true,
-      icon: Scale,
-      accent: 'bg-gradient-to-br from-rose-600 via-rose-700 to-rose-950 border-rose-900/35',
-      indicator: 'bg-rose-600',
-    },
+    ...(pnlOk
+      ? [
+          {
+            title: t('pageProfitLoss'),
+            value: formatCurrency(fin.profitLoss),
+            change: '۰',
+            up: true,
+            icon: Scale,
+            accent: 'bg-gradient-to-br from-rose-600 via-rose-700 to-rose-950 border-rose-900/35',
+            indicator: 'bg-rose-600',
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -91,10 +105,10 @@ export default function DashboardPage() {
             <div className="flex min-h-[400px] flex-col px-8 py-8 xl:px-10">
               <div className="shrink-0">
                 <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">
-                  نمای اجرایی — {COMPANY_LABELS[company]}
+                  {t('executiveDashboard')} — {companyLabel}
                 </h1>
                 <p className="mt-3 max-w-md text-sm leading-7 text-slate-500">
-                  وضعیت موجودی، بیلانس، معاملات و عملکرد دو شرکت در یک نگاه
+                  {t('dashboardSubtitle')}
                 </p>
                 <div className="mt-5">
                   <CompanySwitcher />
@@ -109,9 +123,9 @@ export default function DashboardPage() {
             <div className="relative min-h-[400px] overflow-hidden bg-gradient-to-br from-[#0f766e] via-[#0d9488] to-[#134e4a] xl:min-h-[420px]">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_45%)]" />
               <div className="absolute bottom-8 start-8 end-8 text-white">
-                <p className="text-sm font-semibold text-teal-50/90">نمای اجرایی</p>
+                <p className="text-sm font-semibold text-teal-50/90">{t('executiveDashboard')}</p>
                 <p className="mt-2 max-w-sm text-xs leading-6 text-teal-100/75">
-                  موجودی، بیلانس، معاملات و عملکرد دو شرکت در یک نگاه
+                  {t('dashboardSubtitle')}
                 </p>
               </div>
             </div>
@@ -123,9 +137,15 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="xl:col-span-1">
+          <ExchangeAccountsCard />
+        </div>
+      </section>
+
       <section className="hidden lg:block">
         <div className="mb-5">
-          <h2 className="text-lg font-extrabold text-slate-900">صفحات عملیاتی</h2>
+          <h2 className="text-lg font-extrabold text-slate-900">{t('enterModules')}</h2>
         </div>
 
         <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -137,8 +157,8 @@ export default function DashboardPage() {
 
       <section className="space-y-5">
         <div>
-          <h2 className="text-lg font-extrabold text-slate-900">قیمت خرید و فروش</h2>
-          <p className="mt-1 text-sm text-slate-500">نرخ‌های جاری بازار و مقایسه هفتگی خرید / فروش</p>
+          <h2 className="text-lg font-extrabold text-slate-900">{t('salesTrend')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('chartEmpty')}</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -158,20 +178,20 @@ export default function DashboardPage() {
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <div className="rounded-xl bg-rose-50/70 px-2.5 py-2">
-                      <p className="text-[10px] font-medium text-rose-500">خرید</p>
+                      <p className="text-[10px] font-medium text-rose-500">{t('qaPurchase')}</p>
                       <p className="mt-0.5 text-sm font-bold text-rose-700 num">
                         {formatCurrency(p.buy)}
                       </p>
                     </div>
                     <div className="rounded-xl bg-emerald-50/70 px-2.5 py-2">
-                      <p className="text-[10px] font-medium text-emerald-600">فروش</p>
+                      <p className="text-[10px] font-medium text-emerald-600">{t('qaSale')}</p>
                       <p className="mt-0.5 text-sm font-bold text-emerald-700 num">
                         {formatCurrency(p.sell)}
                       </p>
                     </div>
                   </div>
                   <p className="mt-3 text-[11px] text-slate-400">
-                    حاشیه:{' '}
+                    {t('colBalance')}:{' '}
                     <span className="font-semibold text-teal-700 num">
                       {formatCurrency(p.sell - p.buy)}
                     </span>
@@ -184,13 +204,13 @@ export default function DashboardPage() {
         <Card className="rounded-2xl border-slate-200 shadow-none">
           <CardContent className="p-5">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-bold text-slate-900">خرید و فروش این ماه</p>
+              <p className="text-sm font-bold text-slate-900">{t('salesTrend')}</p>
               <div className="flex items-center gap-3 text-[11px] text-slate-500">
                 <span className="inline-flex items-center gap-1.5">
-                  <i className="h-2 w-2 rounded-full bg-teal-500" /> فروش
+                  <i className="h-2 w-2 rounded-full bg-teal-500" /> {t('qaSale')}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <i className="h-2 w-2 rounded-full bg-slate-700" /> خرید
+                  <i className="h-2 w-2 rounded-full bg-slate-700" /> {t('qaPurchase')}
                 </span>
               </div>
             </div>

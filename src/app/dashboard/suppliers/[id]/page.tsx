@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useMemo } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -27,9 +27,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExportButtons } from '@/components/shared/export-buttons';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
-import { supplierLedgers } from '@/lib/demo-data';
+import { TableEmpty } from '@/components/shared/table-empty';
+import { PurchaseStatusBadge } from '@/components/purchases/purchase-status-badge';
 import { useOpsStore } from '@/lib/ops-store';
+import { useProductCatalog } from '@/lib/product-catalog';
+import { supplierGoodsStats, supplierGoodsValue } from '@/lib/supplier-goods';
+import { useI18n } from '@/lib/i18n/store';
 import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
+import { RelatedJournal } from '@/components/journal/related-journal';
 
 export default function SupplierLedgerPage({
   params,
@@ -38,51 +43,99 @@ export default function SupplierLedgerPage({
 }) {
   const { id } = use(params);
   const supplierId = Number(id);
-  const supplier = useOpsStore((store) =>
-    store.suppliers.find((row) => row.id === supplierId)
+  const { t } = useI18n();
+  const catalog = useProductCatalog();
+  const supplier = useOpsStore((store) => store.suppliers.find((row) => row.id === supplierId));
+  const orders = useOpsStore((s) => s.purchaseOrders.filter((o) => o.supplierId === supplierId));
+  const purchases = useOpsStore((s) => s.companyPurchases.filter((p) => p.supplierId === supplierId));
+  const invoices = useOpsStore((s) => s.purchaseInvoices.filter((i) => i.supplierId === supplierId));
+
+  const goods = useMemo(
+    () => supplierGoodsStats(supplierId, catalog, purchases, invoices),
+    [supplierId, catalog, purchases, invoices]
   );
-  const ledger = supplierLedgers[supplierId] ?? [];
+
+  const payments = useMemo(
+    () =>
+      invoices
+        .filter((i) => i.paid > 0)
+        .map((i) => ({
+          id: i.id,
+          date: i.date,
+          invoice: i.code || i.poCode,
+          amount: i.paid,
+          currency: i.currency,
+          status: i.status,
+        })),
+    [invoices]
+  );
+
+  const ledger = useMemo(() => {
+    const rows: Array<{
+      id: string;
+      date: string;
+      type: string;
+      ref: string;
+      product: string;
+      qty: number;
+      amount: number;
+      paid: number;
+      status: string;
+    }> = [];
+    for (const o of orders) {
+      rows.push({
+        id: `po-${o.id}`,
+        date: o.date,
+        type: t('tabOrders'),
+        ref: o.code,
+        product: o.product,
+        qty: o.qty,
+        amount: o.amount,
+        paid: 0,
+        status: o.status,
+      });
+    }
+    for (const p of purchases) {
+      rows.push({
+        id: `cp-${p.id}`,
+        date: p.date,
+        type: t('tabPurchases'),
+        ref: p.number,
+        product: p.product,
+        qty: p.qty,
+        amount: p.amount,
+        paid: p.paid,
+        status: p.status,
+      });
+    }
+    for (const i of invoices) {
+      rows.push({
+        id: `inv-${i.id}`,
+        date: i.date,
+        type: t('tabInvoices'),
+        ref: i.code || i.poCode,
+        product: i.product,
+        qty: i.qty,
+        amount: i.amount,
+        paid: i.paid,
+        status: i.status,
+      });
+    }
+    return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  }, [orders, purchases, invoices, t]);
 
   if (!supplier) {
     return (
       <div className="space-y-4">
-        <p>تأمین‌کننده یافت نشد.</p>
+        <p>{t('supplierNotFound')}</p>
         <Link href="/dashboard/suppliers">
-          <Button variant="outline">بازگشت</Button>
+          <Button variant="outline">{t('back')}</Button>
         </Link>
       </div>
     );
   }
 
-  const summaryMap = new Map<
-    string,
-    {
-      location: string;
-      contract: string;
-      product: string;
-      purchase: number;
-      loading: number;
-      goodsBalance: number;
-      cashBalance: number;
-    }
-  >();
-
-  ledger.forEach((r) => {
-    if (r.product === '-') return;
-    const key = `${r.location}|${r.contract}|${r.product}`;
-    const prev = summaryMap.get(key);
-    summaryMap.set(key, {
-      location: r.location,
-      contract: r.contract,
-      product: r.product,
-      purchase: (prev?.purchase ?? 0) + r.qty,
-      loading: (prev?.loading ?? 0) + r.loading,
-      goodsBalance: r.goodsBalance,
-      cashBalance: r.cashBalance,
-    });
-  });
-
-  const summaries = [...summaryMap.values()];
+  const goodsValue = supplierGoodsValue(supplierId, purchases);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -99,7 +152,7 @@ export default function SupplierLedgerPage({
                     {supplier.name}
                   </h1>
                   <Badge variant={supplier.cashBalance < 0 ? 'danger' : 'success'}>
-                    {supplier.cashBalance < 0 ? 'بدهکار هستیم' : 'بستانکار / فعال'}
+                    {supplier.cashBalance < 0 ? t('weOwe') : t('theyOwe')}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-slate-500">
@@ -121,45 +174,31 @@ export default function SupplierLedgerPage({
             <div className="flex flex-wrap items-center gap-2">
               <ExportButtons
                 filename={`supplier-${supplier.code}`}
-                title={`حساب ${supplier.name}`}
+                title={supplier.name}
                 columns={[
-                  { key: 'number', label: 'شماره' },
-                  { key: 'dateJalali', label: 'تاریخ شمسی' },
-                  { key: 'dateGregorian', label: 'تاریخ میلادی' },
-                  { key: 'party', label: 'طرف حساب' },
-                  { key: 'details', label: 'تفصیلات' },
-                  { key: 'contract', label: 'قرارداد' },
-                  { key: 'product', label: 'نوع جنس' },
-                  { key: 'location', label: 'محل' },
-                  { key: 'qty', label: 'تعداد/تن' },
-                  { key: 'unitPrice', label: 'فیات' },
-                  { key: 'loading', label: 'بارگیری' },
-                  { key: 'goodsBalance', label: 'بیلانس جنسی' },
-                  { key: 'totalPrice', label: 'جمله قیمت' },
-                  { key: 'payment', label: 'پرداختی' },
-                  { key: 'deposit', label: 'بیعانه' },
-                  { key: 'cashBalance', label: 'بیلانس نقدی' },
-                  { key: 'driver', label: 'درایور' },
-                  { key: 'plate', label: 'پلیت' },
-                  { key: 'notes', label: 'ملاحظات' },
+                  { key: 'name', label: t('colProduct') },
+                  { key: 'qty', label: t('colQty') },
+                  { key: 'unit', label: t('colUnit') },
+                  { key: 'amount', label: t('purchaseValue') },
+                  { key: 'paid', label: t('colPaid') },
+                  { key: 'txnCount', label: t('txnCount') },
                 ]}
-                rows={ledger.map((r) => ({
-                  ...r,
-                  payment: r.payment ?? r.receipt ?? 0,
-                }))}
+                rows={goods}
               />
-              <Button variant="outline" size="sm">
-                <Printer className="ml-2 h-4 w-4" />
-                چاپ
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Printer className="ms-2 h-4 w-4" />
+                {t('print')}
               </Button>
-              <Button size="sm">
-                <Plus className="ml-2 h-4 w-4" />
-                ثبت خرید
-              </Button>
+              <Link href="/dashboard/purchases?new=1">
+                <Button size="sm">
+                  <Plus className="ms-2 h-4 w-4" />
+                  {t('newPurchaseOrder')}
+                </Button>
+              </Link>
               <Link href="/dashboard/suppliers">
                 <Button variant="outline" size="sm">
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                  بازگشت
+                  <ArrowRight className="ms-2 h-4 w-4" />
+                  {t('back')}
                 </Button>
               </Link>
             </div>
@@ -169,29 +208,29 @@ export default function SupplierLedgerPage({
         <div className="grid gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
-              label: 'بیلانس نقدی',
+              label: t('colCashBalance'),
               value: formatCurrency(supplier.cashBalance),
               icon: Wallet,
               tone: 'text-sky-600 bg-sky-50',
               valueClass: balanceClass(supplier.cashBalance),
             },
             {
-              label: 'آخرین معامله',
+              label: t('colGoodsBalance'),
+              value: formatCurrency(goodsValue),
+              icon: Boxes,
+              tone: 'text-teal-600 bg-teal-50',
+            },
+            {
+              label: t('colLastTxn'),
               value: supplier.lastTxn,
               icon: Activity,
               tone: 'text-amber-600 bg-amber-50',
             },
             {
-              label: 'تعداد اسناد',
+              label: t('txnCount'),
               value: String(ledger.length),
               icon: FileText,
               tone: 'text-violet-600 bg-violet-50',
-            },
-            {
-              label: 'خطوط خلاصه',
-              value: String(summaries.length),
-              icon: Boxes,
-              tone: 'text-teal-600 bg-teal-50',
             },
           ].map((k) => {
             const Icon = k.icon;
@@ -212,194 +251,155 @@ export default function SupplierLedgerPage({
         </div>
       </section>
 
-      <Tabs defaultValue="ledger">
+      <Tabs defaultValue="goods">
         <TabsList className="w-full flex-wrap justify-start gap-1 rounded-2xl bg-slate-100 p-1 sm:w-auto">
-          <TabsTrigger value="ledger" className="rounded-xl">دفتر حساب</TabsTrigger>
-          <TabsTrigger value="summary" className="rounded-xl">خلاصه کالا / محل</TabsTrigger>
-          <TabsTrigger value="info" className="rounded-xl">اطلاعات کلی</TabsTrigger>
-          <TabsTrigger value="activity" className="rounded-xl">فعالیت اخیر</TabsTrigger>
+          <TabsTrigger value="goods" className="rounded-xl">{t('tabGoods')}</TabsTrigger>
+          <TabsTrigger value="orders" className="rounded-xl">{t('tabOrders')}</TabsTrigger>
+          <TabsTrigger value="purchases" className="rounded-xl">{t('tabPurchases')}</TabsTrigger>
+          <TabsTrigger value="invoices" className="rounded-xl">{t('tabInvoices')}</TabsTrigger>
+          <TabsTrigger value="payments" className="rounded-xl">{t('tabPayments')}</TabsTrigger>
+          <TabsTrigger value="ledger" className="rounded-xl">{t('tabLedger')}</TabsTrigger>
+          <TabsTrigger value="info" className="rounded-xl">{t('tabInfo')}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="ledger">
-          <Card className="overflow-hidden rounded-[22px] border-slate-100 shadow-[0_8px_30px_rgba(15,23,42,0.045)]">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileText className="h-4 w-4 text-orange-600" />
-                دفتر حساب تأمین‌کننده خارجی
-              </CardTitle>
-            </CardHeader>
-            <div className="table-scroll-hint hidden lg:flex">
-              <span>←</span>
-              <span>برای دیدن همه ستون‌ها جدول را به چپ و راست بکشید</span>
-              <span>→</span>
-            </div>
-            <CardContent className="px-0 pb-4 lg:pb-0 lg:pt-0">
-              <ResponsiveData
-                table={
-                  <div className="table-scroll table-scroll-wide">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>شماره</TableHead>
-                          <TableHead>تاریخ شمسی</TableHead>
-                          <TableHead>تاریخ میلادی</TableHead>
-                          <TableHead>طرف حساب</TableHead>
-                          <TableHead>تفصیلات</TableHead>
-                          <TableHead>شماره قرارداد</TableHead>
-                          <TableHead>نوع جنس</TableHead>
-                          <TableHead>محل</TableHead>
-                          <TableHead>تعداد/تن</TableHead>
-                          <TableHead>فیات</TableHead>
-                          <TableHead>بارگیری</TableHead>
-                          <TableHead>بیلانس جنسی</TableHead>
-                          <TableHead>جمله قیمت</TableHead>
-                          <TableHead>پرداختی</TableHead>
-                          <TableHead>بیعانه / ودیعه</TableHead>
-                          <TableHead>بیلانس نقدی</TableHead>
-                          <TableHead>درایور</TableHead>
-                          <TableHead>پلیت</TableHead>
-                          <TableHead>ملاحظات</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {ledger.map((r) => (
-                          <TableRow key={r.id}>
-                            <TableCell className="font-semibold num">{r.number || '-'}</TableCell>
-                            <TableCell className="num">{r.dateJalali}</TableCell>
-                            <TableCell className="num" dir="ltr">
-                              {r.dateGregorian || '-'}
-                            </TableCell>
-                            <TableCell>{r.party}</TableCell>
-                            <TableCell className="max-w-[140px] whitespace-normal">{r.details}</TableCell>
-                            <TableCell>
-                              <Link
-                                href="/dashboard/contracts/1"
-                                className="num text-[var(--brand)] hover:underline"
-                              >
-                                {r.contract}
-                              </Link>
-                            </TableCell>
-                            <TableCell>{r.product}</TableCell>
-                            <TableCell>{r.location}</TableCell>
-                            <TableCell className="num">{r.qty || '-'}</TableCell>
-                            <TableCell className="num">
-                              {r.unitPrice ? formatCurrency(r.unitPrice) : '-'}
-                            </TableCell>
-                            <TableCell className="num">{r.loading || '-'}</TableCell>
-                            <TableCell className="num">{formatNumber(r.goodsBalance, 0)}</TableCell>
-                            <TableCell className="num">
-                              {r.totalPrice ? formatCurrency(r.totalPrice) : '-'}
-                            </TableCell>
-                            <TableCell className="num text-red-600">
-                              {(r.payment ?? r.receipt)
-                                ? formatCurrency(r.payment ?? r.receipt)
-                                : '-'}
-                            </TableCell>
-                            <TableCell className="num">
-                              {r.deposit ? formatCurrency(r.deposit) : '-'}
-                            </TableCell>
-                            <TableCell className={`num font-semibold ${balanceClass(r.cashBalance)}`}>
-                              {formatCurrency(r.cashBalance)}
-                            </TableCell>
-                            <TableCell>{r.driver || '-'}</TableCell>
-                            <TableCell className="num">{r.plate || '-'}</TableCell>
-                            <TableCell>{r.notes || '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                }
-                cards={
-                  ledger.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-slate-500">هنوز معامله‌ای ثبت نشده است</p>
-                  ) : (
-                    ledger.map((r) => (
-                      <MobileRecordCard
-                        key={r.id}
-                        title={r.details || r.party}
-                        subtitle={`${r.number || '—'} · ${r.dateJalali} · ${r.contract}`}
-                        badge={<Badge variant="muted">{r.product}</Badge>}
-                        metrics={[
-                          { label: 'مبلغ', value: r.totalPrice ? formatCurrency(r.totalPrice) : '-' },
-                          { label: 'مقدار', value: r.qty || '-' },
-                          {
-                            label: 'بیلانس نقدی',
-                            value: (
-                              <span className={balanceClass(r.cashBalance)}>
-                                {formatCurrency(r.cashBalance)}
-                              </span>
-                            ),
-                          },
-                          { label: 'بیلانس جنسی', value: formatNumber(r.goodsBalance, 0) },
-                        ]}
-                        extra={
-                          <>
-                            <ExtraRow label="شماره" value={r.number || '-'} />
-                            <ExtraRow label="طرف حساب" value={r.party} />
-                            <ExtraRow label="تفصیلات" value={r.details || '-'} />
-                            <ExtraRow label="محل" value={r.location} />
-                            <ExtraRow label="فیات" value={r.unitPrice ? formatCurrency(r.unitPrice) : '-'} />
-                            <ExtraRow label="بارگیری" value={r.loading || '-'} />
-                            <ExtraRow
-                              label="پرداختی"
-                              value={
-                                (r.payment ?? r.receipt)
-                                  ? formatCurrency(r.payment ?? r.receipt)
-                                  : '-'
-                              }
-                            />
-                            <ExtraRow
-                              label="بیعانه"
-                              value={r.deposit ? formatCurrency(r.deposit) : '-'}
-                            />
-                            <ExtraRow label="درایور" value={r.driver || '-'} />
-                            <ExtraRow label="پلیت" value={r.plate || '-'} />
-                            <ExtraRow label="ملاحظات" value={r.notes || '-'} />
-                          </>
-                        }
-                      />
-                    ))
-                  )
-                }
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="summary">
+        <TabsContent value="goods">
           <Card className="overflow-hidden rounded-[22px] border-slate-100">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">خلاصه به تفکیک محل و کالا</CardTitle>
+              <CardTitle className="text-base">{t('goodsBreakdown')}</CardTitle>
             </CardHeader>
             <CardContent className="px-0 pb-4 lg:pb-0">
               <ResponsiveData
-                breakpoint="md"
                 table={
                   <div className="table-scroll">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>محل</TableHead>
-                          <TableHead>قرارداد</TableHead>
-                          <TableHead>نوع جنس</TableHead>
-                          <TableHead>خرید</TableHead>
-                          <TableHead>بارگیری</TableHead>
-                          <TableHead>بیلانس جنسی</TableHead>
-                          <TableHead>بیلانس نقدی</TableHead>
+                          <TableHead>{t('colProduct')}</TableHead>
+                          <TableHead>{t('colQty')}</TableHead>
+                          <TableHead>{t('colUnit')}</TableHead>
+                          <TableHead>{t('purchaseValue')}</TableHead>
+                          <TableHead>{t('colPaid')}</TableHead>
+                          <TableHead>{t('remaining')}</TableHead>
+                          <TableHead>{t('lastPurchase')}</TableHead>
+                          <TableHead>{t('txnCount')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {summaries.map((s) => (
-                          <TableRow key={`${s.location}-${s.contract}-${s.product}`}>
-                            <TableCell>{s.location}</TableCell>
-                            <TableCell className="num">{s.contract}</TableCell>
-                            <TableCell>{s.product}</TableCell>
-                            <TableCell className="num">{formatNumber(s.purchase, 0)}</TableCell>
-                            <TableCell className="num">{formatNumber(s.loading, 0)}</TableCell>
-                            <TableCell className="num">{formatNumber(s.goodsBalance, 0)}</TableCell>
-                            <TableCell className={`num ${balanceClass(s.cashBalance)}`}>
-                              {formatCurrency(s.cashBalance)}
+                        {goods.length === 0 ? (
+                          <TableEmpty colSpan={8} message={t('noRowsYet')} />
+                        ) : null}
+                        {goods.map((g) => (
+                          <TableRow key={g.code}>
+                            <TableCell className="font-medium">{g.name}</TableCell>
+                            <TableCell className="num">{formatNumber(g.qty, 0)}</TableCell>
+                            <TableCell>{g.unit}</TableCell>
+                            <TableCell className="num">{formatCurrency(g.amount)}</TableCell>
+                            <TableCell className="num text-emerald-700">{formatCurrency(g.paid)}</TableCell>
+                            <TableCell className="num text-amber-700">
+                              {formatCurrency(Math.max(0, g.amount - g.paid))}
+                            </TableCell>
+                            <TableCell className="num">{g.lastDate}</TableCell>
+                            <TableCell className="num">{g.txnCount}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                }
+                cards={goods.map((g) => (
+                  <MobileRecordCard
+                    key={g.code}
+                    title={g.name}
+                    subtitle={g.code}
+                    metrics={[
+                      { label: t('colQty'), value: `${formatNumber(g.qty, 0)} ${g.unit}` },
+                      { label: t('purchaseValue'), value: formatCurrency(g.amount) },
+                      { label: t('colPaid'), value: formatCurrency(g.paid) },
+                      { label: t('txnCount'), value: String(g.txnCount) },
+                    ]}
+                  />
+                ))}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="orders">
+          <HistoryTable
+            empty={t('noPurchaseOrders')}
+            rows={orders.map((o) => ({
+              id: o.id,
+              code: o.code,
+              date: o.date,
+              product: o.product,
+              qty: `${formatNumber(o.qty, 0)} ${o.unit}`,
+              amount: formatCurrency(o.amount, o.currency),
+              status: o.status,
+              href: '/dashboard/purchases',
+            }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="purchases">
+          <HistoryTable
+            empty={t('noCompanyPurchases')}
+            rows={purchases.map((p) => ({
+              id: p.id,
+              code: p.number,
+              date: p.date,
+              product: p.product,
+              qty: `${formatNumber(p.qty, 0)} ${p.unit}`,
+              amount: formatCurrency(p.amount, p.currency),
+              status: p.status,
+              href: '/dashboard/purchases/company',
+            }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="invoices">
+          <HistoryTable
+            empty={t('noPurchaseInvoices')}
+            rows={invoices.map((i) => ({
+              id: i.id,
+              code: i.code || i.poCode,
+              date: i.date,
+              product: i.product,
+              qty: formatNumber(i.qty, 0),
+              amount: formatCurrency(i.amount, i.currency),
+              status: i.status,
+              href: '/dashboard/purchases/invoices',
+            }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="payments">
+          <Card className="overflow-hidden rounded-[22px] border-slate-100">
+            <CardContent className="px-0 pb-4 pt-4 lg:pb-0">
+              <ResponsiveData
+                table={
+                  <div className="table-scroll">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('colDate')}</TableHead>
+                          <TableHead>{t('colInvoice')}</TableHead>
+                          <TableHead>{t('colPaid')}</TableHead>
+                          <TableHead>{t('colStatus')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {payments.length === 0 ? (
+                          <TableEmpty colSpan={4} message={t('noRowsYet')} />
+                        ) : null}
+                        {payments.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell className="num">{p.date}</TableCell>
+                            <TableCell className="num">{p.invoice}</TableCell>
+                            <TableCell className="num text-emerald-700">
+                              {formatCurrency(p.amount, p.currency)}
+                            </TableCell>
+                            <TableCell>
+                              <PurchaseStatusBadge status={p.status} />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -407,24 +407,77 @@ export default function SupplierLedgerPage({
                     </Table>
                   </div>
                 }
-                cards={summaries.map((s) => (
+                cards={payments.map((p) => (
                   <MobileRecordCard
-                    key={`${s.location}-${s.contract}-${s.product}`}
-                    title={s.product}
-                    subtitle={`${s.location} · ${s.contract}`}
+                    key={p.id}
+                    title={p.invoice}
+                    subtitle={p.date}
+                    badge={<PurchaseStatusBadge status={p.status} />}
+                    metrics={[{ label: t('colPaid'), value: formatCurrency(p.amount, p.currency) }]}
+                  />
+                ))}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ledger">
+          <Card className="overflow-hidden rounded-[22px] border-slate-100">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t('tabLedger')}</CardTitle>
+            </CardHeader>
+            <CardContent className="px-0 pb-4 lg:pb-0">
+              <ResponsiveData
+                table={
+                  <div className="table-scroll">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('colDate')}</TableHead>
+                          <TableHead>{t('colType')}</TableHead>
+                          <TableHead>{t('code')}</TableHead>
+                          <TableHead>{t('colProduct')}</TableHead>
+                          <TableHead>{t('colQty')}</TableHead>
+                          <TableHead>{t('colAmount')}</TableHead>
+                          <TableHead>{t('colPaid')}</TableHead>
+                          <TableHead>{t('colStatus')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ledger.length === 0 ? (
+                          <TableEmpty colSpan={8} message={t('noRowsYet')} />
+                        ) : null}
+                        {ledger.map((r) => (
+                          <TableRow key={r.id}>
+                            <TableCell className="num">{r.date}</TableCell>
+                            <TableCell>{r.type}</TableCell>
+                            <TableCell className="num">{r.ref}</TableCell>
+                            <TableCell>{r.product}</TableCell>
+                            <TableCell className="num">{r.qty || '—'}</TableCell>
+                            <TableCell className="num">{formatCurrency(r.amount)}</TableCell>
+                            <TableCell className="num text-emerald-700">
+                              {r.paid ? formatCurrency(r.paid) : '—'}
+                            </TableCell>
+                            <TableCell>
+                              <PurchaseStatusBadge status={r.status} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                }
+                cards={ledger.map((r) => (
+                  <MobileRecordCard
+                    key={r.id}
+                    title={r.ref}
+                    subtitle={`${r.type} · ${r.date}`}
+                    badge={<PurchaseStatusBadge status={r.status} />}
                     metrics={[
-                      { label: 'خرید', value: formatNumber(s.purchase, 0) },
-                      { label: 'بارگیری', value: formatNumber(s.loading, 0) },
-                      { label: 'بیلانس جنسی', value: formatNumber(s.goodsBalance, 0) },
-                      {
-                        label: 'بیلانس نقدی',
-                        value: (
-                          <span className={balanceClass(s.cashBalance)}>
-                            {formatCurrency(s.cashBalance)}
-                          </span>
-                        ),
-                      },
+                      { label: t('colProduct'), value: r.product },
+                      { label: t('colAmount'), value: formatCurrency(r.amount) },
                     ]}
+                    extra={<ExtraRow label={t('colPaid')} value={r.paid ? formatCurrency(r.paid) : '—'} />}
                   />
                 ))}
               />
@@ -435,12 +488,12 @@ export default function SupplierLedgerPage({
         <TabsContent value="info">
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              ['نام تأمین‌کننده', supplier.name],
-              ['کد', supplier.code],
-              ['کشور', supplier.country],
-              ['تلفن', supplier.phone || '—'],
-              ['آخرین معامله', supplier.lastTxn],
-              ['وضعیت', supplier.cashBalance < 0 ? 'بدهکار هستیم' : 'بستانکار'],
+              [t('name'), supplier.name],
+              [t('code'), supplier.code],
+              [t('colCountry'), supplier.country],
+              [t('phone'), supplier.phone || '—'],
+              [t('colLastTxn'), supplier.lastTxn],
+              [t('accountStatus'), supplier.cashBalance < 0 ? t('weOwe') : t('theyOwe')],
             ].map(([label, value]) => (
               <Card key={String(label)} className="rounded-[20px] border-slate-100">
                 <CardContent className="p-4">
@@ -451,36 +504,88 @@ export default function SupplierLedgerPage({
             ))}
           </div>
         </TabsContent>
-
-        <TabsContent value="activity">
-          <div className="space-y-3">
-            {ledger.slice(-6).reverse().map((r) => (
-              <div
-                key={r.id}
-                className="flex items-start gap-3 rounded-[20px] border border-slate-100 bg-white p-4 shadow-[0_6px_20px_rgba(15,23,42,0.04)]"
-              >
-                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
-                  <Activity className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="muted">{r.product || 'سند'}</Badge>
-                    <span className="text-xs text-slate-400 num">{r.dateJalali}</span>
-                  </div>
-                  <p className="mt-1 text-sm font-medium text-slate-800">{r.details || r.party}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {r.contract ? `قرارداد ${r.contract} · ` : ''}
-                    {r.totalPrice ? formatCurrency(r.totalPrice) : formatCurrency(r.cashBalance)}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {!ledger.length ? (
-              <p className="py-10 text-center text-sm text-slate-500">فعالیتی ثبت نشده است</p>
-            ) : null}
-          </div>
-        </TabsContent>
       </Tabs>
+      <RelatedJournal filter={{ supplierId }} />
     </div>
+  );
+}
+
+function HistoryTable({
+  empty,
+  rows,
+}: {
+  empty: string;
+  rows: Array<{
+    id: number;
+    code: string;
+    date: string;
+    product: string;
+    qty: string;
+    amount: string;
+    status: string;
+    href: string;
+  }>;
+}) {
+  const { t } = useI18n();
+  return (
+    <Card className="overflow-hidden rounded-[22px] border-slate-100">
+      <CardContent className="px-0 pb-4 pt-4 lg:pb-0">
+        <ResponsiveData
+          table={
+            <div className="table-scroll">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('code')}</TableHead>
+                    <TableHead>{t('colDate')}</TableHead>
+                    <TableHead>{t('colProduct')}</TableHead>
+                    <TableHead>{t('colQty')}</TableHead>
+                    <TableHead>{t('colAmount')}</TableHead>
+                    <TableHead>{t('colStatus')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.length === 0 ? <TableEmpty colSpan={6} message={empty} /> : null}
+                  {rows.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <Link href={r.href} className="num font-semibold text-[var(--brand)] hover:underline">
+                          {r.code}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="num">{r.date}</TableCell>
+                      <TableCell>{r.product}</TableCell>
+                      <TableCell className="num">{r.qty}</TableCell>
+                      <TableCell className="num">{r.amount}</TableCell>
+                      <TableCell>
+                        <PurchaseStatusBadge status={r.status} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          }
+          cards={
+            rows.length === 0 ? (
+              <p className="py-10 text-center text-sm text-slate-500">{empty}</p>
+            ) : (
+              rows.map((r) => (
+                <MobileRecordCard
+                  key={r.id}
+                  title={r.code}
+                  subtitle={`${r.product} · ${r.date}`}
+                  badge={<PurchaseStatusBadge status={r.status} />}
+                  metrics={[
+                    { label: t('colQty'), value: r.qty },
+                    { label: t('colAmount'), value: r.amount },
+                  ]}
+                />
+              ))
+            )
+          }
+        />
+      </CardContent>
+    </Card>
   );
 }

@@ -1,15 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { MASTER_PRODUCTS } from '@/lib/catalog-master';
+
 export type CompanyKey = 'arya' | 'turkmen';
 
-export const products: Array<{ code: string; name: string; unit: string }> = [
-  { code: 'DIESEL', name: 'دیزل', unit: 'تن' },
-  { code: 'PETROL', name: 'پطرول', unit: 'تن' },
-  { code: 'PETROL-92', name: 'پطرول ۹۲', unit: 'تن' },
-  { code: 'GAS', name: 'گاز', unit: 'تن' },
-  { code: 'LPG', name: 'LPG', unit: 'تن' },
-];
+export const products: Array<{ code: string; name: string; unit: string }> = MASTER_PRODUCTS.map(
+  (p) => ({ code: p.code, name: p.name, unit: p.unit })
+);
 
-export type ProductCode = (typeof products)[number]['code'];
+export type ProductCode = string;
 
 export const emptyGoods = (): Record<string, number> =>
   Object.fromEntries(products.map((p) => [p.code, 0]));
@@ -68,12 +66,28 @@ export type SupplierRecord = {
 export const suppliers: SupplierRecord[] = [];
 export const supplierLedgers: Record<number, any[]> = {};
 
+export type RepresentativeRecord = {
+  id: number;
+  code: string;
+  name: string;
+  phone: string;
+  region: string;
+  cashBalance: number;
+  lastTxn: string;
+  goods: Record<string, number>;
+  notes: string;
+};
+
+export const representatives: RepresentativeRecord[] = [];
+
 export type ContractRecord = {
   id: number;
   number: string;
   supplierName: string;
   supplierId: number;
   product: string;
+  productCode?: string;
+  unit?: string;
   totalQty: number;
   arrived: number;
   unloaded: number;
@@ -87,6 +101,7 @@ export type ContractRecord = {
   pricePerUnit: number;
   status: string;
   wagons?: number;
+  notes?: string;
 };
 
 export const contracts: ContractRecord[] = [];
@@ -196,18 +211,30 @@ export type JournalEntry = {
   number: string;
   dateJalali: string;
   dateGregorian: string;
+  weekday?: string;
   giver: string;
   receiver: string;
   details: string;
   amount: number;
   currency: string;
+  qty?: number;
+  unit?: string;
   opType: string;
   status: string;
   company: CompanyKey;
   links?: Record<string, number | boolean>;
+  marks?: {
+    office?: boolean;
+    accounting?: boolean;
+    supervisor?: boolean;
+    chief?: boolean;
+  };
 };
 
 export const journalEntries: JournalEntry[] = [];
+
+/** exchanger = صرافی عادی · joint = حساب مشترک · treasury = خزانه */
+export type ExchangeAccountKind = 'exchanger' | 'joint' | 'treasury';
 
 export type ExchangeHouse = {
   id: number;
@@ -218,7 +245,44 @@ export type ExchangeHouse = {
   balance: number;
   fxPnl: number;
   company: CompanyKey | 'both';
+  /** Default exchanger; joint/treasury appear in separate summary rows */
+  kind?: ExchangeAccountKind;
+  location?: string;
+  notes?: string;
 };
+
+/** طلب بالای صرافی (مثبت) و باقیات از صرافی (منفی) جدا گزارش می‌شوند — یکجا جمع نمی‌شوند. */
+export function summarizeExchangeBalances(rows: ExchangeHouse[]) {
+  const exchangers = rows.filter((r) => (r.kind ?? 'exchanger') === 'exchanger');
+  const joint = rows.filter((r) => r.kind === 'joint');
+  const treasury = rows.filter((r) => r.kind === 'treasury');
+
+  let claimsOnExchangers = 0; // جمله طلب بالای صرافی‌ها
+  let dueFromExchangers = 0; // جمله باقیات از صرافی‌ها
+
+  for (const row of exchangers) {
+    const bal = Number(row.balance) || 0;
+    if (bal > 0) claimsOnExchangers += bal;
+    else if (bal < 0) dueFromExchangers += Math.abs(bal);
+  }
+
+  const exchangerInventory = exchangers.reduce((s, r) => s + (Number(r.balance) || 0), 0);
+  const jointTotal = joint.reduce((s, r) => s + (Number(r.balance) || 0), 0);
+  const treasuryTotal = treasury.reduce((s, r) => s + (Number(r.balance) || 0), 0);
+
+  return {
+    exchangers,
+    joint,
+    treasury,
+    claimsOnExchangers,
+    dueFromExchangers,
+    exchangerInventory,
+    jointTotal,
+    treasuryTotal,
+    /** موجودی صرافی با خزانه (بدون قاطی کردن طلب و باقیات در یک رقم راپور طلب/بدهی) */
+    exchangerPlusTreasury: exchangerInventory + jointTotal + treasuryTotal,
+  };
+}
 
 export const exchangeHouses: ExchangeHouse[] = [];
 export const exchangeTransactions: Record<number, any[]> = {};

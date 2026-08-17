@@ -27,11 +27,13 @@ import { Label } from '@/components/ui/label';
 import { useCompanyStore } from '@/lib/company-store';
 import { emptyGoods, goodsValue, products, sumGoods, type CustomerRecord } from '@/lib/demo-data';
 import { useOpsStore } from '@/lib/ops-store';
+import { useI18n } from '@/lib/i18n/store';
 import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
 
 type Customer = CustomerRecord;
 
 export default function CustomersPage() {
+  const { t } = useI18n();
   const { company } = useCompanyStore();
   const searchParams = useSearchParams();
   const storedCustomers = useOpsStore((s) => s.customers);
@@ -84,7 +86,7 @@ export default function CustomersPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="صفحه عمومی مشتریان"
+        title={t('pageCustomers')}
         description="لیست مشتریان — بیلانس، حساب نقدی، حساب جنسی، مقدار هر نوع کالا، وضعیت حساب"
         actions={
           <>

@@ -27,13 +27,12 @@ import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { useCompanyStore } from '@/lib/company-store';
 import { useOpsStore } from '@/lib/ops-store';
 import { useI18n } from '@/lib/i18n/store';
+import { pickLocaleLabel } from '@/lib/i18n/label-map';
 import { StackLabel } from '@/components/shared/bi-label';
 import { cn } from '@/lib/utils';
 
 function bi(label: string, locale: string) {
-  if (!label.includes('|')) return label;
-  const [fa, en] = label.split('|');
-  return locale === 'en' ? en || fa : fa;
+  return pickLocaleLabel(label, locale === 'en' ? 'en' : 'fa');
 }
 
 export type FieldType = 'text' | 'number' | 'date' | 'select' | 'textarea';
@@ -81,8 +80,12 @@ function emptyForm(fields: FieldDef[]): CrudRow {
   return row;
 }
 
-function formatCell(field: FieldDef, value: CrudRow[string]) {
+function formatCell(field: FieldDef, value: CrudRow[string], locale: string) {
   if (value === null || value === undefined || value === '') return '—';
+  if (field.options) {
+    const opt = field.options.find((o) => o.value === String(value));
+    if (opt) return bi(opt.label, locale);
+  }
   if (field.money && typeof value === 'number') {
     return new Intl.NumberFormat('en-US').format(value);
   }
@@ -226,7 +229,7 @@ export function CrudPage({
   const exportRows = filtered.map((row) => {
     const out: CrudRow = {};
     listFields.forEach((f) => {
-      out[f.key] = formatCell(f, row[f.key]);
+      out[f.key] = formatCell(f, row[f.key], locale);
     });
     return out;
   });
@@ -314,7 +317,7 @@ export function CrudPage({
                 variant="outline"
                 className="lg:hidden"
                 onClick={() => setFilterOpen(true)}
-                title={locale === 'fa' ? 'فیلتر' : 'Filter'}
+                title={t('filter')}
               >
                 <SlidersHorizontal className="h-4 w-4" />
               </Button>
@@ -334,7 +337,7 @@ export function CrudPage({
                   </TableHead>
                 ))}
                 <TableHead className="w-[140px] text-center">
-                  {locale === 'fa' ? 'عملیات' : 'Actions'}
+                  {t('colActions')}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -370,7 +373,7 @@ export function CrudPage({
                             (f.type === 'number' || f.money) && 'num'
                           )}
                         >
-                          {formatCell(f, value)}
+                          {formatCell(f, value, locale)}
                         </TableCell>
                       );
                     })}
@@ -425,7 +428,7 @@ export function CrudPage({
                   return (
                     <MobileRecordCard
                       key={String(row[idKey])}
-                      title={formatCell(titleField, row[titleField.key])}
+                      title={formatCell(titleField, row[titleField.key], locale)}
                       subtitle={bi(entityName, locale)}
                       badge={
                         statusMeta ? (
@@ -438,7 +441,7 @@ export function CrudPage({
                         label: bi(f.label, locale),
                         value: (
                           <span className={cn((f.money || f.type === 'number') && 'num')}>
-                            {formatCell(f, row[f.key])}
+                            {formatCell(f, row[f.key], locale)}
                           </span>
                         ),
                       }))}
@@ -448,7 +451,7 @@ export function CrudPage({
                               <ExtraRow
                                 key={f.key}
                                 label={bi(f.label, locale)}
-                                value={formatCell(f, row[f.key])}
+                                value={formatCell(f, row[f.key], locale)}
                               />
                             ))
                           : null
@@ -570,7 +573,7 @@ export function CrudPage({
           <div className="grid gap-3 sm:grid-cols-2">
             {fields.map((f) => {
               const value = active[f.key];
-              let display = formatCell(f, value);
+              let display = formatCell(f, value, locale);
               if (f.key === statusKey && statusMap && value != null) {
                 display = bi(statusMap[String(value)]?.label ?? String(value), locale);
               }
@@ -621,7 +624,7 @@ export function CrudPage({
         <BottomSheet
           open={filterOpen}
           onClose={() => setFilterOpen(false)}
-          title={locale === 'fa' ? 'فیلتر و وضعیت' : 'Filter & status'}
+          title={t('filterStatus')}
         >
           <div className="flex flex-wrap gap-2">
             <Button
@@ -632,7 +635,7 @@ export function CrudPage({
                 setFilterOpen(false);
               }}
             >
-              {locale === 'fa' ? 'همه' : 'All'}
+              {t('all')}
             </Button>
             {Object.entries(statusMap).map(([value, meta]) => (
               <Button

@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Dialog } from '@/components/ui/dialog';
+import { useI18n } from '@/lib/i18n/store';
 
 export type CompactField = {
   key: string;
   label: string;
-  type?: 'text' | 'number' | 'select';
+  type?: 'text' | 'number' | 'select' | 'date' | 'checkbox';
   required?: boolean;
   options?: { value: string; label: string }[];
   placeholder?: string;
@@ -24,8 +25,9 @@ export function CompactFormDialog({
   description,
   fields,
   initial,
-  submitLabel = 'ذخیره',
+  submitLabel,
   onSubmit,
+  size = 'md',
 }: {
   open: boolean;
   onClose: () => void;
@@ -35,7 +37,9 @@ export function CompactFormDialog({
   initial?: Record<string, string>;
   submitLabel?: string;
   onSubmit: (values: Record<string, string>) => void;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }) {
+  const { t } = useI18n();
   const [values, setValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -45,7 +49,8 @@ export function CompactFormDialog({
       next[f.key] = initial?.[f.key] ?? f.options?.[0]?.value ?? '';
     }
     setValues(next);
-  }, [open, fields, initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const save = () => {
     for (const f of fields) {
@@ -61,14 +66,14 @@ export function CompactFormDialog({
       onClose={onClose}
       title={title}
       description={description}
-      size="md"
+      size={size}
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>
-            انصراف
+            {t('cancel')}
           </Button>
           <Button type="button" onClick={save}>
-            {submitLabel}
+            {submitLabel ?? t('save')}
           </Button>
         </>
       }
@@ -91,15 +96,29 @@ export function CompactFormDialog({
                   </option>
                 ))}
               </Select>
+            ) : f.type === 'checkbox' ? (
+              <label className="mt-1 flex h-10 items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-teal-700"
+                  checked={values[f.key] === '1'}
+                  onChange={(e) =>
+                    setValues((p) => ({ ...p, [f.key]: e.target.checked ? '1' : '' }))
+                  }
+                />
+                {f.placeholder || f.label}
+              </label>
             ) : (
               <Input
                 required={f.required}
-                type={f.type === 'number' ? 'number' : 'text'}
+                type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}
                 value={values[f.key] ?? ''}
                 onChange={(e) => setValues((p) => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
-                dir={f.dir ?? (f.type === 'number' ? 'ltr' : undefined)}
-                className={f.type === 'number' || f.dir === 'ltr' ? 'text-left' : undefined}
+                dir={f.dir ?? (f.type === 'number' || f.type === 'date' ? 'ltr' : undefined)}
+                className={
+                  f.type === 'number' || f.type === 'date' || f.dir === 'ltr' ? 'text-left' : undefined
+                }
               />
             )}
           </div>

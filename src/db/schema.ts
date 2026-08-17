@@ -120,6 +120,21 @@ export const suppliers = pgTable('suppliers', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Representatives (نماینده‌ها)
+export const representatives = pgTable('representatives', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  nameEn: varchar('name_en', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  region: varchar('region', { length: 255 }),
+  address: text('address'),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // Contracts (قراردادها)
 export const contracts = pgTable('contracts', {
   id: serial('id').primaryKey(),
@@ -231,6 +246,10 @@ export const salesOrders = pgTable('sales_orders', {
   createdBy: integer('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  // Resale from another customer's remaining goods
+  sourceCustomerId: integer('source_customer_id').references(() => customers.id),
+  sourceUnitPrice: decimal('source_unit_price', { precision: 18, scale: 2 }),
+  customerLotId: integer('customer_lot_id'),
 });
 
 // Deliveries (بارگیری)
@@ -267,14 +286,28 @@ export const journalEntries = pgTable('journal_entries', {
   id: serial('id').primaryKey(),
   entryNumber: varchar('entry_number', { length: 100 }).notNull().unique(),
   entryDate: date('entry_date').notNull(),
+  dateJalali: varchar('date_jalali', { length: 32 }),
+  dateGregorian: varchar('date_gregorian', { length: 32 }),
+  weekday: varchar('weekday', { length: 32 }),
   companyId: integer('company_id').references(() => companies.id).notNull(),
   payer: varchar('payer', { length: 255 }),
   receiver: varchar('receiver', { length: 255 }),
   description: text('description').notNull(),
-  amount: decimal('amount', { precision: 18, scale: 2 }).notNull(),
+  amount: decimal('amount', { precision: 18, scale: 2 }).notNull().default('0'),
+  qty: decimal('qty', { precision: 18, scale: 3 }),
+  unit: varchar('unit', { length: 30 }),
   currency: varchar('currency', { length: 10 }).references(() => currencies.code).notNull(),
-  type: varchar('type', { length: 50 }).notNull(), // receipt, payment, transfer
+  type: varchar('type', { length: 50 }).notNull(),
   balance: decimal('balance', { precision: 18, scale: 2 }),
+  customerId: integer('customer_id').references(() => customers.id),
+  supplierId: integer('supplier_id').references(() => suppliers.id),
+  exchangeHouseId: integer('exchange_house_id'),
+  contractId: integer('contract_id').references(() => contracts.id),
+  warehouseId: integer('warehouse_id').references(() => warehouses.id),
+  markH: boolean('mark_h').notNull().default(false),
+  markA: boolean('mark_a').notNull().default(false),
+  markN: boolean('mark_n').notNull().default(false),
+  markC: boolean('mark_c').notNull().default(false),
   notes: text('notes'),
   createdBy: integer('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -287,7 +320,11 @@ export const exchangeHouses = pgTable('exchange_houses', {
   name: varchar('name', { length: 255 }).notNull(),
   phone: varchar('phone', { length: 50 }),
   address: text('address'),
+  // exchanger | joint | treasury — طلب و باقیات فقط روی exchanger جدا گزارش می‌شود
+  kind: varchar('kind', { length: 30 }).notNull().default('exchanger'),
+  location: varchar('location', { length: 255 }),
   isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -328,6 +365,10 @@ export const customerLedger = pgTable('customer_ledger', {
   goodsBalance: decimal('goods_balance', { precision: 18, scale: 3 }),
   cashBalance: decimal('cash_balance', { precision: 18, scale: 2 }),
   warehouseId: integer('warehouse_id').references(() => warehouses.id),
+  // purchase | loading | takeback | resale | receipt | payment
+  txnType: varchar('txn_type', { length: 50 }).notNull().default('purchase'),
+  relatedCustomerId: integer('related_customer_id').references(() => customers.id),
+  sourceUnitPrice: decimal('source_unit_price', { precision: 18, scale: 2 }),
   notes: text('notes'),
   createdBy: integer('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -407,6 +448,159 @@ export const profitLossDetails = pgTable('profit_loss_details', {
   // Profit/Loss
   profitLossPerTon: decimal('profit_loss_per_ton', { precision: 18, scale: 2 }),
   totalProfitLoss: decimal('total_profit_loss', { precision: 18, scale: 2 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Customer goods lots — oil/goods sitting with a customer at the original sale rate.
+// Example: 100 t sold to حاجی احمد @ $1300; later 25 t can be taken back and resold.
+export const customerGoodsLots = pgTable('customer_goods_lots', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  customerId: integer('customer_id').references(() => customers.id).notNull(),
+  productId: integer('product_id').references(() => products.id).notNull(),
+  salesOrderId: integer('sales_order_id').references(() => salesOrders.id),
+  qtyOriginal: decimal('qty_original', { precision: 18, scale: 3 }).notNull(),
+  qtyRemaining: decimal('qty_remaining', { precision: 18, scale: 3 }).notNull(),
+  unit: varchar('unit', { length: 50 }).notNull().default('تن'),
+  unitPrice: decimal('unit_price', { precision: 18, scale: 2 }).notNull(),
+  soldAt: date('sold_at').notNull(),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Resale of customer-held goods to another customer at a new rate.
+export const goodsResales = pgTable('goods_resales', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  sourceLotId: integer('source_lot_id').references(() => customerGoodsLots.id).notNull(),
+  sourceCustomerId: integer('source_customer_id').references(() => customers.id).notNull(),
+  targetCustomerId: integer('target_customer_id').references(() => customers.id).notNull(),
+  productId: integer('product_id').references(() => products.id).notNull(),
+  quantity: decimal('quantity', { precision: 18, scale: 3 }).notNull(),
+  sourceUnitPrice: decimal('source_unit_price', { precision: 18, scale: 2 }).notNull(),
+  resaleUnitPrice: decimal('resale_unit_price', { precision: 18, scale: 2 }).notNull(),
+  profitPerUnit: decimal('profit_per_unit', { precision: 18, scale: 2 }).notNull(),
+  totalProfit: decimal('total_profit', { precision: 18, scale: 2 }).notNull(),
+  resaleDate: date('resale_date').notNull(),
+  details: text('details'),
+  notes: text('notes'),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Expense books — top-level مصارف summary (کمیشن بانکی، متفرقه، بالای اجناس، ...)
+export const expenseBooks = pgTable('expense_books', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 50 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  nameEn: varchar('name_en', { length: 255 }),
+  kind: varchar('kind', { length: 30 }).notNull(), // company | goods
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+});
+
+// Goods expense accounts — e.g. مصارف پطرول 92 قرارداد B-035103
+export const expenseAccounts = pgTable('expense_accounts', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  bookCode: varchar('book_code', { length: 50 }).notNull().default('goods'),
+  code: varchar('code', { length: 100 }),
+  name: varchar('name', { length: 255 }).notNull(),
+  category: varchar('category', { length: 255 }),
+  productId: integer('product_id').references(() => products.id),
+  contractId: integer('contract_id').references(() => contracts.id),
+  partyId: integer('party_id').references(() => parties.id),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Expense payment lines — each clickable total (e.g. ترانسپورت داخلی $20,000) drills into these.
+export const expenseEntries = pgTable('expense_entries', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  bookCode: varchar('book_code', { length: 50 }).notNull(),
+  accountId: integer('account_id').references(() => expenseAccounts.id),
+  entryDate: date('entry_date').notNull(),
+  counterparty: varchar('counterparty', { length: 255 }),
+  details: text('details'),
+  productType: varchar('product_type', { length: 100 }),
+  productName: varchar('product_name', { length: 255 }),
+  litersPerBottle: decimal('liters_per_bottle', { precision: 18, scale: 3 }),
+  bottlesPerCarton: decimal('bottles_per_carton', { precision: 18, scale: 3 }),
+  partyLabel: varchar('party_label', { length: 255 }),
+  partyId: integer('party_id').references(() => parties.id),
+  contractId: integer('contract_id').references(() => contracts.id),
+  expenseType: varchar('expense_type', { length: 100 }).notNull(),
+  taken: decimal('taken', { precision: 18, scale: 2 }).notNull().default('0'),
+  given: decimal('given', { precision: 18, scale: 2 }).notNull().default('0'),
+  location: varchar('location', { length: 255 }),
+  status: varchar('status', { length: 50 }).notNull().default('ok'),
+  notes: text('notes'),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Storage goods movements — unload into / load out of a depot
+export const storageGoodsMoves = pgTable('storage_goods_moves', {
+  id: serial('id').primaryKey(),
+  warehouseId: integer('warehouse_id').references(() => warehouses.id).notNull(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  moveDate: date('move_date').notNull(),
+  kind: varchar('kind', { length: 20 }).notNull(), // unload | load
+  counterparty: varchar('counterparty', { length: 255 }),
+  details: text('details'),
+  productName: varchar('product_name', { length: 255 }).notNull(),
+  productCode: varchar('product_code', { length: 100 }),
+  quantity: decimal('quantity', { precision: 18, scale: 3 }).notNull(),
+  unit: varchar('unit', { length: 50 }).notNull().default('تن'),
+  partyLabel: varchar('party_label', { length: 255 }),
+  partyId: integer('party_id').references(() => parties.id),
+  contractId: integer('contract_id').references(() => contracts.id),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Storage cash ledger — گرفت / داد / تاریخ ختم کرایه
+export const storageCashEntries = pgTable('storage_cash_entries', {
+  id: serial('id').primaryKey(),
+  warehouseId: integer('warehouse_id').references(() => warehouses.id).notNull(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  entryDate: date('entry_date').notNull(),
+  rentEndDate: date('rent_end_date'),
+  counterparty: varchar('counterparty', { length: 255 }),
+  details: text('details'),
+  taken: decimal('taken', { precision: 18, scale: 2 }).notNull().default('0'),
+  given: decimal('given', { precision: 18, scale: 2 }).notNull().default('0'),
+  location: varchar('location', { length: 255 }),
+  productType: varchar('product_type', { length: 255 }),
+  notes: text('notes'),
+  wagonStayId: integer('wagon_stay_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Wagon daily rent while sitting at a storage
+export const wagonRentStays = pgTable('wagon_rent_stays', {
+  id: serial('id').primaryKey(),
+  warehouseId: integer('warehouse_id').references(() => warehouses.id).notNull(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  startDate: date('start_date').notNull(),
+  rentEndDate: date('rent_end_date'),
+  wagons: integer('wagons').notNull().default(0),
+  dailyRatePerWagon: decimal('daily_rate_per_wagon', { precision: 18, scale: 2 }).notNull().default('0'),
+  dailyRatePerTon: decimal('daily_rate_per_ton', { precision: 18, scale: 4 }).notNull().default('0'),
+  freeDays: integer('free_days').notNull().default(0),
+  quantity: decimal('quantity', { precision: 18, scale: 3 }).notNull().default('0'),
+  unit: varchar('unit', { length: 50 }).notNull().default('تن'),
+  productType: varchar('product_type', { length: 255 }),
+  partyLabel: varchar('party_label', { length: 255 }),
+  partyId: integer('party_id').references(() => parties.id),
+  location: varchar('location', { length: 255 }),
+  notes: text('notes'),
+  status: varchar('status', { length: 20 }).notNull().default('open'), // open | settled
+  settledEntryId: integer('settled_entry_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

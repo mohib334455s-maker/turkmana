@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Eye, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Eye, Plus, Warehouse as WarehouseIcon } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -19,251 +19,252 @@ import { ExportButtons } from '@/components/shared/export-buttons';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { TableEmpty } from '@/components/shared/table-empty';
 import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
+import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
+import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
-import { inventorySkus, products, warehouses } from '@/lib/demo-data';
-import { useOpsStore, type OpsRow } from '@/lib/ops-store';
+import { useOpsStore } from '@/lib/ops-store';
+import { useI18n } from '@/lib/i18n/store';
+import { formatNumber } from '@/lib/utils';
 import type { CompanyKey } from '@/lib/demo-data';
-import { formatCurrency, formatNumber } from '@/lib/utils';
-import { BiLabel } from '@/components/shared/bi-label';
-import { emptyInventoryStock } from '@/lib/demo-data';
-
-const EMPTY: OpsRow[] = [];
 
 export default function WarehousesPage() {
+  const { t, locale } = useI18n();
   const { company } = useCompanyStore();
-  const storedPhysical = useOpsStore(
-    (s) => s.lists.physicalWarehouses ?? EMPTY
-  );
-  const addToList = useOpsStore((s) => s.addToList);
+  const warehouses = useOpsStore((s) => s.warehouseEntities);
+  const lots = useOpsStore((s) => s.stockLots);
+  const addWarehouse = useOpsStore((s) => s.addWarehouse);
+  const removeWarehouse = useOpsStore((s) => s.removeWarehouse);
   const [createOpen, setCreateOpen] = useState(false);
-  const legacyRows = warehouses.filter((w) => matchesCompany(w.company, company));
-  type PhysicalWh = {
-    id: number;
-    name: string;
-    location: string;
-    company: CompanyKey;
-    stock: Record<string, number>;
-  };
-  const physicalRows = (storedPhysical as unknown as PhysicalWh[]).filter((w) =>
-    matchesCompany(w.company, company)
-  );
-  const warehouseIds = new Set(warehouses.map((w) => w.id));
 
-  const general = legacyRows.filter((w) => w.type !== 'ترانزیت' && w.type !== 'خارجی');
-  const transit = legacyRows.filter(
-    (w) => w.type === 'ترانزیت' || w.type === 'خارجی' || w.location?.includes('ترانزیت')
+  const rows = useMemo(
+    () => warehouses.filter((w) => matchesCompany(w.company, company)),
+    [warehouses, company]
   );
 
-  const stockSum = (list: typeof legacyRows) => {
-    const out: Record<string, number> = {};
-    products.forEach((p) => {
-      out[p.code] = list.reduce((s, w) => s + (w.stock?.[p.code] ?? 0), 0);
-    });
-    return out;
-  };
-
-  const generalStock = stockSum(general.length ? general : legacyRows);
-  const transitStock = stockSum(transit);
-  const physicalColSpan = 3 + inventorySkus.length;
+  const enriched = rows.map((w) => {
+    const whLots = lots.filter((l) => l.warehouseId === w.id);
+    const totalQty = whLots.reduce((s, l) => s + l.qty, 0);
+    const products = new Set(whLots.map((l) => l.productCode)).size;
+    const contracts = new Set(whLots.map((l) => l.contractId)).size;
+    return { ...w, totalQty, products, contracts, lotCount: whLots.length };
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <FlowLinks
+        steps={PURCHASE_FLOW_STEPS.map((s) => ({
+          ...s,
+          active: s.href === '/dashboard/warehouses',
+        }))}
+      />
+
       <PageHeader
-        title="ذخایر و گدام اجناس"
-        description="گدام → جنس → مقدار — موجودی فیزیکی به تفکیک کالا و شرکت"
+        title={t('pageWarehouses')}
+        description={
+          locale === 'en'
+            ? 'Each storage account has a goods ledger (unload/load) and a cash ledger (payments and daily wagon rent).'
+            : 'هر ذخیره دو حساب دارد: جنسی (تخلیه و بارگیری) و نقدی (پرداخت و کرایه روزانه واگن).'
+        }
         actions={
           <>
             <ExportButtons
               filename="warehouses"
-              title="ذخایر و گدام"
+              title={t('pageWarehouses')}
               columns={[
-                { key: 'name', label: 'نام ذخیره' },
-                { key: 'location', label: 'محل' },
-                ...inventorySkus.map((p) => ({ key: p.code, label: p.name })),
-                { key: 'total', label: 'مجموع' },
+                { key: 'name', label: locale === 'en' ? 'Name' : 'نام' },
+                { key: 'location', label: locale === 'en' ? 'Location' : 'محل' },
+                { key: 'totalQty', label: locale === 'en' ? 'Total qty' : 'جمع موجودی' },
+                { key: 'contracts', label: locale === 'en' ? 'Contracts' : 'قراردادها' },
+                { key: 'products', label: locale === 'en' ? 'Products' : 'کالاها' },
               ]}
-              rows={physicalRows.map((w) => ({
-                name: w.name,
-                location: w.location,
-                ...Object.fromEntries(inventorySkus.map((p) => [p.code, w.stock?.[p.code] ?? 0])),
-                total: Object.values(w.stock || {}).reduce((s: number, q) => s + Number(q), 0),
-              }))}
+              rows={enriched}
             />
             <CompanySwitcher />
             <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="ml-2 h-4 w-4" />
-              گدام جدید
+              <Plus className="ms-2 h-4 w-4" />
+              {locale === 'en' ? 'New storage' : 'ذخیره جدید'}
             </Button>
           </>
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {legacyRows.length === 0 ? (
-          <Card className="md:col-span-2 xl:col-span-4">
-            <CardContent className="py-10 text-center text-sm text-slate-500">
-              هنوز ذخیره‌ای ثبت نشده است. پس از ثبت گدام، موجودی اینجا نمایش داده می‌شود.
-            </CardContent>
-          </Card>
-        ) : (
-          legacyRows.map((w) => {
-            const total = Object.values(w.stock || {}).reduce((s: number, q) => s + Number(q), 0);
-            const fill = Math.min(100, (total / Number(w.capacity || 1)) * 100);
-            const value = products.reduce(
-              (s, p) => s + (w.stock[p.code] ?? 0) * (w.unitPrice?.[p.code] ?? 0),
-              0
-            );
-            return (
-              <Card key={w.id} className="transition-shadow hover:shadow-md">
-                <CardContent className="space-y-3 p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-slate-900">{w.name}</h3>
-                      <p className="mt-1 text-xs text-slate-500">{w.location}</p>
-                    </div>
-                    <Badge variant="info">{w.type || 'گدام'}</Badge>
-                  </div>
-                  <div>
-                    <div className="mb-1 flex justify-between text-xs text-slate-500">
-                      <span>پر شدن</span>
-                      <span className="num">{formatNumber(fill, 0)}%</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full bg-[var(--brand)]" style={{ width: `${fill}%` }} />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-xs text-slate-500">موجودی</p>
-                      <p className="font-semibold num">{formatNumber(total, 0)} تن</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">ارزش</p>
-                      <p className="font-semibold num">{formatCurrency(value)}</p>
-                    </div>
-                  </div>
-                  <Link href={`/dashboard/warehouses/${w.id}`}>
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Eye className="ml-2 h-4 w-4" />
-                      صفحه گدام
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">موجودی عمومی</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {products.map((p) => (
-              <div key={p.code} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                <p className="text-xs text-slate-500">{p.name}</p>
-                <p className="mt-1 font-bold num">{formatNumber(generalStock[p.code] ?? 0, 0)}</p>
-              </div>
-            ))}
+          <CardContent className="flex items-center gap-3 p-4">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+              <WarehouseIcon className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs text-slate-500">
+                {locale === 'en' ? 'Warehouses' : 'تعداد انبار'}
+              </p>
+              <p className="text-xl font-bold num">{enriched.length}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">موجودی ترانزیت / خارجی</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {products.map((p) => (
-              <div key={p.code} className="rounded-xl border border-amber-100 bg-amber-50/50 px-3 py-2">
-                <p className="text-xs text-slate-500">{p.name}</p>
-                <p className="mt-1 font-bold num">{formatNumber(transitStock[p.code] ?? 0, 0)}</p>
-              </div>
-            ))}
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500">
+              {locale === 'en' ? 'Active lots' : 'لات‌های فعال'}
+            </p>
+            <p className="mt-1 text-xl font-bold num">
+              {lots.filter((l) => matchesCompany(l.company, company)).length}
+            </p>
           </CardContent>
         </Card>
-      </div>
-
-      <Card className="hidden overflow-hidden lg:block">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">موجودی فیزیکی — گدام → جنس → مقدار</CardTitle>
-        </CardHeader>
-        <CardContent className="min-w-0 px-0">
-          <div className="table-scroll table-scroll-wide">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead><BiLabel fa="نام ذخیره" en="Depot" /></TableHead>
-                <TableHead><BiLabel fa="محل ذخیره" en="Location" /></TableHead>
-                {inventorySkus.map((p) => (
-                  <TableHead key={p.code}>
-                    <BiLabel fa={p.name} en={p.nameEn} />
-                  </TableHead>
-                ))}
-                <TableHead>موجودی عمومی ردیف</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {physicalRows.length === 0 ? (
-                <TableEmpty colSpan={physicalColSpan} />
-              ) : (
-                physicalRows.map((w) => {
-                  const total = Object.values(w.stock || {}).reduce((s: number, q) => s + Number(q), 0);
-                  const hasDetail = warehouseIds.has(w.id);
-                  return (
-                    <TableRow key={w.id}>
-                      <TableCell className="font-semibold">{w.name}</TableCell>
-                      <TableCell>{w.location}</TableCell>
-                      {inventorySkus.map((p) => (
-                        <TableCell key={p.code} className="num">
-                          {formatNumber(w.stock?.[p.code] ?? 0, 0)}
-                        </TableCell>
-                      ))}
-                      <TableCell className="num font-semibold">{formatNumber(total, 0)}</TableCell>
-                      <TableCell>
-                        {hasDetail ? (
-                          <Link href={`/dashboard/warehouses/${w.id}`}>
-                            <Button size="icon" variant="ghost">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500">
+              {locale === 'en' ? 'Total stock qty' : 'جمع موجودی'}
+            </p>
+            <p className="mt-1 text-xl font-bold num">
+              {formatNumber(
+                lots
+                  .filter((l) => matchesCompany(l.company, company))
+                  .reduce((s, l) => s + l.qty, 0),
+                0
               )}
-            </TableBody>
-          </Table>
-          </div>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
+        <div className="bg-emerald-700 px-4 py-3 text-center text-lg font-bold text-white">
+          {locale === 'en' ? 'Storage' : 'ذخایر'}
+        </div>
+        <CardContent className="px-0 pb-4 pt-0 lg:pb-0">
+          <ResponsiveData
+            table={
+              <div className="table-scroll">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{locale === 'en' ? 'No.' : 'شماره'}</TableHead>
+                      <TableHead>{locale === 'en' ? 'Account' : 'طرف حساب'}</TableHead>
+                      <TableHead>{locale === 'en' ? 'Category' : 'کتگوری'}</TableHead>
+                      <TableHead className="text-center">{t('colActions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {enriched.length === 0 ? (
+                      <TableEmpty
+                        colSpan={4}
+                        message={
+                          locale === 'en'
+                            ? 'No storage accounts yet — create one'
+                            : 'هنوز ذخیره‌ای ثبت نشده — یکی بسازید'
+                        }
+                      />
+                    ) : null}
+                    {enriched.map((w, i) => (
+                      <TableRow key={w.id}>
+                        <TableCell className="num">{i + 1}</TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/dashboard/warehouses/${w.id}`}
+                            className="font-semibold text-slate-900 hover:text-teal-700"
+                          >
+                            {w.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="muted">{locale === 'en' ? 'Storage' : 'ذخیره'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            <Link href={`/dashboard/warehouses/${w.id}`}>
+                              <Button size="icon" variant="ghost" title={t('details')}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeWarehouse(w.id)}
+                            >
+                              {t('delete')}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            }
+            cards={
+              enriched.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-500">
+                  {locale === 'en' ? 'No storage yet' : 'هنوز ذخیره‌ای ثبت نشده'}
+                </p>
+              ) : (
+                enriched.map((w) => (
+                  <MobileRecordCard
+                    key={w.id}
+                    title={w.name}
+                    subtitle={w.location}
+                    badge={<Badge variant="muted">{locale === 'en' ? 'Storage' : 'ذخیره'}</Badge>}
+                    metrics={[
+                      { label: locale === 'en' ? 'Qty' : 'موجودی', value: formatNumber(w.totalQty, 0) },
+                      { label: locale === 'en' ? 'Contracts' : 'قرارداد', value: String(w.contracts) },
+                    ]}
+                    extra={<ExtraRow label={t('colCompany')} value={w.company} />}
+                    footer={
+                      <Link href={`/dashboard/warehouses/${w.id}`}>
+                        <Button size="sm" variant="outline">
+                          {locale === 'en' ? 'Goods or cash' : 'جنسی یا نقدی'}
+                        </Button>
+                      </Link>
+                    }
+                  />
+                ))
+              )
+            }
+          />
         </CardContent>
-      </Card>
+      </div>
 
       <CompactFormDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="گدام جدید"
+        title={locale === 'en' ? 'New storage' : 'ذخیره جدید'}
+        size="lg"
         fields={[
-          { key: 'name', label: 'نام گدام', required: true },
-          { key: 'location', label: 'محل', required: true },
+          { key: 'name', label: locale === 'en' ? 'Account name' : 'طرف حساب / نام ذخیره', required: true },
+          { key: 'location', label: locale === 'en' ? 'Location' : 'محل', required: true, placeholder: 'هرات / تورغندی' },
           {
-            key: 'company',
-            label: 'شرکت',
+            key: 'type',
+            label: locale === 'en' ? 'Type' : 'نوع',
             type: 'select',
             options: [
-              { value: 'arya', label: 'آریا' },
-              { value: 'turkmen', label: 'ترکمن' },
+              { value: 'عمومی', label: locale === 'en' ? 'General' : 'عمومی' },
+              { value: 'سوخت', label: locale === 'en' ? 'Fuel' : 'سوخت' },
+              { value: 'خشک', label: locale === 'en' ? 'Dry goods' : 'خشک' },
+              { value: 'ترانزیت', label: locale === 'en' ? 'Transit' : 'ترانزیت' },
             ],
           },
+          {
+            key: 'company',
+            label: t('colCompany'),
+            type: 'select',
+            options: [
+              { value: 'arya', label: t('companyArya') },
+              { value: 'turkmen', label: t('companyTurkmen') },
+            ],
+          },
+          { key: 'capacity', label: locale === 'en' ? 'Capacity' : 'ظرفیت', type: 'number' },
+          { key: 'notes', label: t('colNotes') },
         ]}
-        submitLabel="ثبت"
+        submitLabel={t('save')}
         onSubmit={(v) => {
-          addToList('physicalWarehouses', {
+          addWarehouse({
             name: v.name.trim(),
             location: v.location.trim(),
+            type: v.type || 'عمومی',
             company: (v.company as CompanyKey) || 'arya',
-            stock: emptyInventoryStock(),
+            capacity: Number(v.capacity || 0),
+            notes: v.notes || '',
           });
         }}
       />

@@ -16,14 +16,21 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { reportCardThemes } from '@/lib/route-module-meta';
 import { useI18n } from '@/lib/i18n/store';
+import { useAuthStore } from '@/lib/auth-store';
+import { canViewProfitLoss, usePermissionsStore } from '@/lib/permissions';
 
 export default function ReportsPage() {
   const { tn } = useI18n();
+  const role = useAuthStore((s) => s.role);
+  const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
+  const pnlOk = canViewProfitLoss(role, profitLossRoles);
 
   const reports: { title: string; href: string; icon: LucideIcon; desc: string }[] = [
     { title: tn('executive'), href: '/dashboard/reports/executive', icon: TrendingUp, desc: tn('reportsDesc') },
     { title: tn('aging'), href: '/dashboard/reports/aging', icon: Wallet, desc: tn('aging') },
-    { title: tn('profitLoss'), href: '/dashboard/profit-loss', icon: FileSpreadsheet, desc: tn('profitLoss') },
+    ...(pnlOk
+      ? [{ title: tn('profitLoss'), href: '/dashboard/profit-loss', icon: FileSpreadsheet, desc: tn('profitLoss') }]
+      : []),
     { title: tn('customers'), href: '/dashboard/customers/summary', icon: Users, desc: tn('customersSummary') },
     { title: tn('inventory'), href: '/dashboard/inventory', icon: Warehouse, desc: tn('inventory') },
     { title: tn('reportsCenter'), href: '/dashboard/reports', icon: BarChart3, desc: tn('reportsDesc') },

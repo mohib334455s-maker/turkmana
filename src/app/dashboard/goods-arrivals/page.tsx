@@ -26,10 +26,12 @@ import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import type { CompanyKey, GoodsArrivalRecord } from '@/lib/demo-data';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { BiLabel } from '@/components/shared/bi-label';
+import { useI18n } from '@/lib/i18n/store';
 
 const EMPTY: OpsRow[] = [];
 
 export default function GoodsArrivalsPage() {
+  const { t } = useI18n();
   const { company } = useCompanyStore();
   const items = useOpsStore(
     (s) => (s.lists.goodsArrivals ?? EMPTY) as unknown as GoodsArrivalRecord[]
@@ -42,7 +44,7 @@ export default function GoodsArrivalsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="ثبت محموله / CMR و حمل‌ونقل"
+        title={t('pageGoodsArrivals')}
         description="تاریخ، فروشنده، قرارداد، محل، واگن، CMR، وزن‌ها، مسیر، وضعیت و هزینه‌های مرتبط"
         actions={
           <>

@@ -22,6 +22,7 @@ import { matchesCompany, useCompanyStore } from '@/lib/company-store';
 import { cmrShipments } from '@/lib/demo-data';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { BiLabel } from '@/components/shared/bi-label';
+import { useI18n } from '@/lib/i18n/store';
 
 const statusVariant: Record<string, 'success' | 'warning' | 'info' | 'muted' | 'danger'> = {
   تخلیه: 'success',
@@ -32,6 +33,7 @@ const statusVariant: Record<string, 'success' | 'warning' | 'info' | 'muted' | '
 };
 
 export default function DieselGydroPage() {
+  const { t } = useI18n();
   const { company } = useCompanyStore();
   const [year, setYear] = useState('all');
   const [location, setLocation] = useState('all');
@@ -62,7 +64,7 @@ export default function DieselGydroPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="دیزل گیدرو / ثبت محموله سالانه"
+        title={t('pageGydro')}
         description="محموله‌های CMR دیزل گیدرو — فیلتر سال، محل، کالا، قرارداد و وضعیت"
         actions={
           <>

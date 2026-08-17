@@ -1,5 +1,5 @@
 import { db } from './index';
-import { users, companies, currencies, products } from './schema';
+import { users, companies, currencies, products, expenseBooks } from './schema';
 import { hashPassword } from '@/lib/auth';
 
 async function seed() {
@@ -63,6 +63,16 @@ async function seed() {
     ]).onConflictDoNothing();
 
     console.log('✅ Products created');
+
+    await db.insert(expenseBooks).values([
+      { code: 'bank_commission', name: 'کمیشن بانکی', nameEn: 'Bank commission', kind: 'company', sortOrder: 1 },
+      { code: 'balance_expenses', name: 'مصارف بیلانس', nameEn: 'Balance expenses', kind: 'company', sortOrder: 2 },
+      { code: 'duplicate_tariffs', name: 'تعرفه‌های تکراری و مصارف قابل مجرایی', nameEn: 'Duplicate tariffs', kind: 'company', sortOrder: 3 },
+      { code: 'misc', name: 'مصارف متفرقه', nameEn: 'Company miscellaneous', kind: 'company', sortOrder: 4 },
+      { code: 'goods', name: 'مصارف بالای اجناس', nameEn: 'Expenses on goods', kind: 'goods', sortOrder: 5 },
+    ]).onConflictDoNothing();
+
+    console.log('✅ Expense books created');
 
     console.log('🎉 Seeding completed successfully!');
   } catch (error) {

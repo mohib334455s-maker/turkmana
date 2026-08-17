@@ -26,10 +26,12 @@ import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import type { CompanyKey, ForeignArrivalRecord } from '@/lib/demo-data';
 import { formatNumber } from '@/lib/utils';
 import { BiLabel } from '@/components/shared/bi-label';
+import { useI18n } from '@/lib/i18n/store';
 
 const EMPTY: OpsRow[] = [];
 
 export default function ForeignArrivalsPage() {
+  const { t } = useI18n();
   const { company } = useCompanyStore();
   const items = useOpsStore((s) => (s.lists.foreignArrivals ?? EMPTY) as unknown as ForeignArrivalRecord[]);
   const setList = useOpsStore((s) => s.setList);
@@ -40,7 +42,7 @@ export default function ForeignArrivalsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="لیست وارده شرکت"
+        title={t('pageForeignArrivals')}
         description="کالاهایی که از خارج در حال ورود هستند — جزئیات، ویرایش و حذف"
         actions={
           <>

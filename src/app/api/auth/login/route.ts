@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { generateToken, verifyPassword } from '@/lib/auth';
 import { isDemoAuth } from '@/lib/demo-auth';
 
@@ -53,12 +53,17 @@ function loginSuccessResponse(user: {
   return response;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json().catch(() => ({}))) as {
+      email?: string;
+      username?: string;
+      password?: string;
+    };
     const { email, password } = body;
 
-    const loginId = String(email ?? body.username ?? '').trim().toLowerCase();
+    const emailValue = String(email ?? body.username ?? '').trim();
+    const loginId = emailValue.toLowerCase();
 
     if (!loginId || !password) {
       return NextResponse.json(
@@ -88,7 +93,7 @@ export async function POST(request: NextRequest) {
       const { eq } = await import('drizzle-orm');
 
       const user = await db.query.users.findFirst({
-        where: eq(users.email, email),
+        where: eq(users.email, emailValue),
       });
 
       if (!user || !user.isActive) {

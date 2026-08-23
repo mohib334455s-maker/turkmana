@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowLeftRight,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -17,6 +16,9 @@ import { cn } from '@/lib/utils';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
 import { canManageUsers, useAuthStore } from '@/lib/auth-store';
 import { canViewProfitLoss, usePermissionsStore } from '@/lib/permissions';
+import { useCompanyStore } from '@/lib/company-store';
+import { CompanyLogo } from '@/components/brand/company-logo';
+import { companyBrandName } from '@/lib/brand';
 import type { NavKey } from '@/lib/i18n/messages';
 import {
   longestActiveChild,
@@ -27,7 +29,7 @@ import {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { t, tn, dir } = useI18n();
+  const { t, tn, dir, locale } = useI18n();
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const mobileNavOpen = useUiStore((s) => s.mobileNavOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
@@ -39,6 +41,8 @@ export function Sidebar() {
   const closeTimer = useRef<number | null>(null);
   const isRtl = dir === 'rtl';
   const role = useAuthStore((s) => s.role);
+  const company = useCompanyStore((s) => s.company);
+  const companyName = companyBrandName(company, locale);
   const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
   const pnlOk = canViewProfitLoss(role, profitLossRoles);
   const visibleModules = navModules.map((mod) => {
@@ -123,14 +127,12 @@ export function Sidebar() {
             onClick={closeMobile}
             className="flex min-w-0 items-center gap-3 rounded-2xl px-1 py-1"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/20">
-              <ArrowLeftRight className="h-5 w-5" strokeWidth={1.75} />
-            </div>
+            <CompanyLogo company={company} size="md" className="shrink-0" />
             {!collapsed ? (
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-white">{t('appName')}</p>
+                <p className="truncate text-sm font-bold text-white">{companyName}</p>
                 <p className="truncate text-[11px] text-emerald-100/75">
-                  v2.4.0 · {t('appTagline')}
+                  {t('appName')} · v2.4.0
                 </p>
               </div>
             ) : null}

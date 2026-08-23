@@ -13,6 +13,8 @@ type ExportButtonsProps = {
   disabled?: boolean;
   size?: 'sm' | 'default';
   className?: string;
+  company?: string;
+  subtitle?: string;
 };
 
 export function ExportButtons({
@@ -23,6 +25,8 @@ export function ExportButtons({
   disabled,
   size = 'sm',
   className,
+  company,
+  subtitle,
 }: ExportButtonsProps) {
   return (
     <div className={cn('flex flex-wrap gap-2', className)}>
@@ -43,7 +47,7 @@ export function ExportButtons({
         size={size}
         disabled={disabled}
         className="border-rose-200 bg-rose-50/50 text-rose-800 hover:bg-rose-100"
-        onClick={() => exportToPdf(title, columns, rows)}
+        onClick={() => exportToPdf(title, columns, rows, { company, subtitle })}
       >
         <FileText className="ml-2 h-4 w-4 text-rose-600" />
         PDF

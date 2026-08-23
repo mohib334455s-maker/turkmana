@@ -19,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
+import { BrandDocumentHeader, CompanyLogo } from '@/components/brand/company-logo';
 import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import { calcSellable, normalizeParty, type PartyStageMetrics } from '@/lib/stock-lots';
 import { formatNumber } from '@/lib/utils';
@@ -26,6 +27,7 @@ import { useI18n } from '@/lib/i18n/store';
 import { RelatedJournal } from '@/components/journal/related-journal';
 import { todayIso } from '@/lib/purchase-flow';
 import { isPartyOpenForExpenses } from '@/lib/permissions';
+import { exportToPdf } from '@/lib/export';
 
 const EMPTY: OpsRow[] = [];
 
@@ -196,6 +198,8 @@ export default function PartyDetailPage({
     setReceiveOpen(false);
   };
 
+  const partyCompany = party.company || contract?.company || 'arya';
+
   return (
     <div className="space-y-5 animate-fade-in">
       <FlowLinks
@@ -205,9 +209,44 @@ export default function PartyDetailPage({
         }))}
       />
 
+      <BrandDocumentHeader
+        company={partyCompany}
+        title={`${locale === 'en' ? 'Party' : 'پارتی'} ${party.number || party.id}`}
+        subtitle={`${titleSupplier} — ${titleProduct} — ${locale === 'en' ? 'Contract' : 'قرارداد'} ${party.contractNumber}`}
+        actions={
+          <Button
+            size="sm"
+            className="bg-emerald-500 text-white hover:bg-emerald-400"
+            onClick={() =>
+              exportToPdf(
+                `${locale === 'en' ? 'Party' : 'پارتی'} ${party.number}`,
+                [
+                  { key: 'field', label: locale === 'en' ? 'Field' : 'فیلد' },
+                  { key: 'value', label: locale === 'en' ? 'Value' : 'مقدار' },
+                ],
+                [
+                  { field: locale === 'en' ? 'Party' : 'پارتی', value: party.number },
+                  { field: locale === 'en' ? 'Contract' : 'قرارداد', value: party.contractNumber },
+                  { field: locale === 'en' ? 'Vendor' : 'طرف قرارداد', value: titleSupplier },
+                  { field: locale === 'en' ? 'Product' : 'کالا', value: titleProduct },
+                  { field: locale === 'en' ? 'Unloaded' : 'تخلیه', value: party.unloaded.qty },
+                  { field: locale === 'en' ? 'Sold' : 'فروش', value: party.sold.qty },
+                  { field: locale === 'en' ? 'Shortage' : 'کسرات', value: party.shortage.qty },
+                  { field: locale === 'en' ? 'Waste' : 'ضایعات', value: party.waste.qty },
+                  { field: locale === 'en' ? 'Sellable' : 'قابل فروش', value: party.sellable.qty },
+                ],
+                { company: partyCompany, subtitle: titleSupplier }
+              )
+            }
+          >
+            {locale === 'en' ? 'Print / PDF' : 'خروجی پارتی'}
+          </Button>
+        }
+      />
+
       {/* Header card matching the spreadsheet style */}
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid gap-0 border-b border-slate-200 md:grid-cols-[auto_1fr_auto]">
+        <div className="grid gap-0 border-b border-slate-200 md:grid-cols-[auto_1fr_auto_auto]">
           <div className="flex items-center justify-center bg-amber-100 px-5 py-4 text-2xl font-extrabold text-amber-900 num">
             {party.number || party.id}
           </div>
@@ -223,6 +262,9 @@ export default function PartyDetailPage({
                 {party.contractNumber}
               </Link>
             </p>
+          </div>
+          <div className="flex items-center justify-center bg-black px-4 py-3">
+            <CompanyLogo company={partyCompany} size="md" />
           </div>
           <div className="flex items-center justify-center bg-slate-50 px-5 py-4 text-sm font-bold text-slate-800">
             {party.location || '—'}

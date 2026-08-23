@@ -31,8 +31,6 @@ const pages = [
   ['hr/employees/page.tsx', 'employees'],
   ['hr/payroll/page.tsx', 'payroll'],
   ['hr/attendance/page.tsx', 'attendance'],
-  ['documents/page.tsx', 'documents'],
-  ['documents/guarantees/page.tsx', 'guarantees'],
   ['reports/executive/page.tsx', 'executiveReport'],
   ['reports/aging/page.tsx', 'aging'],
   ['settings/companies/page.tsx', 'companies'],

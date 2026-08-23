@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { FileText, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,8 @@ import { useI18n } from '@/lib/i18n/store';
 import { useProductCatalog } from '@/lib/product-catalog';
 import { MEASUREMENT_UNITS } from '@/lib/catalog-master';
 import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
+import { BrandDocumentHeader, CompanyLogo } from '@/components/brand/company-logo';
+import { exportContractDocument } from '@/lib/export';
 import { isContractOpenForExpenses } from '@/lib/permissions';
 
 export default function ContractsPage() {
@@ -98,6 +100,12 @@ export default function ContractsPage() {
         }))}
       />
 
+      <BrandDocumentHeader
+        company={company}
+        title={t('pageContracts')}
+        subtitle={tn('contractsDesc')}
+      />
+
       <PageHeader
         title={t('pageContracts')}
         description={tn('contractsDesc')}
@@ -106,6 +114,7 @@ export default function ContractsPage() {
             <ExportButtons
               filename="contracts"
               title={t('pageContracts')}
+              company={company}
               columns={[
                 { key: 'number', label: locale === 'en' ? 'Contract' : 'شماره قرارداد' },
                 { key: 'supplierName', label: locale === 'en' ? 'Counterparty' : 'شرکت طرف' },
@@ -135,13 +144,16 @@ export default function ContractsPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
+        <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-none">
+          <CardContent className="relative p-4">
+            <div className="absolute end-3 top-3">
+              <CompanyLogo company={company === 'arya' ? 'arya' : 'turkmen'} size="sm" />
+            </div>
             <p className="text-xs text-slate-500">تعداد قرارداد فعال</p>
             <p className="mt-1 text-2xl font-bold num">{activeRows.length}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-2xl border-slate-200 shadow-none">
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">مجموع مقدار قرارداد</p>
             <p className="mt-1 text-2xl font-bold num">
@@ -149,7 +161,7 @@ export default function ContractsPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-2xl border-slate-200 shadow-none">
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">در ترانزیت</p>
             <p className="mt-1 text-2xl font-bold num">
@@ -159,9 +171,10 @@ export default function ContractsPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2">
+      <Card className="rounded-2xl border-slate-200 shadow-none">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
           <CardTitle className="text-base">جدول قراردادها</CardTitle>
+          <CompanyLogo company={company === 'arya' ? 'arya' : 'turkmen'} size="sm" />
         </CardHeader>
         <CardContent className="px-0 pb-4 lg:pb-0">
           <ResponsiveData
@@ -240,7 +253,38 @@ export default function ContractsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <RecordActions
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        title="خروجی قرارداد"
+                        className="border-emerald-200 text-emerald-800"
+                        onClick={() =>
+                          exportContractDocument({
+                            id: c.id,
+                            number: c.number,
+                            supplierName: c.supplierName,
+                            product: c.product,
+                            location: c.location,
+                            company: c.company,
+                            status: c.status,
+                            totalQty: c.totalQty,
+                            pricePerUnit: c.pricePerUnit,
+                            arrived: c.arrived,
+                            unloaded: c.unloaded,
+                            sold: c.sold,
+                            shortage: c.shortage,
+                            waste: c.waste,
+                            sellable: c.sellable,
+                            transit: c.transit,
+                            parties: [],
+                          })
+                        }
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                      </Button>
+                      <RecordActions
                       title="قرارداد"
                       detailHref={`/dashboard/contracts/${c.id}`}
                       row={{
@@ -271,6 +315,7 @@ export default function ContractsPage() {
                       }}
                       onDelete={() => removeContract(c.id)}
                     />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

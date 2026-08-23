@@ -31,8 +31,6 @@ export const demoRows = {
   employees: empty,
   payroll: empty,
   attendance: empty,
-  documents: empty,
-  guarantees: empty,
   executiveReport: empty,
   aging: empty,
   companies: empty,

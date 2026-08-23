@@ -141,10 +141,10 @@ export function CrudPage({
 
   const filtered = useMemo(() => {
     let list = rows;
-    if (showCompanySwitcher && company !== 'both') {
+    if (showCompanySwitcher) {
       list = list.filter((r) => {
         const c = r[companyKey];
-        if (c === undefined || c === null || c === '' || c === 'both') return true;
+        if (c === undefined || c === null || c === '') return true;
         return c === company;
       });
     }

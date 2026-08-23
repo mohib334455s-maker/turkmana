@@ -28,6 +28,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExportButtons } from '@/components/shared/export-buttons';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { TableEmpty } from '@/components/shared/table-empty';
+import { BrandDocumentHeader, CompanyLogo } from '@/components/brand/company-logo';
+import { useCompanyStore } from '@/lib/company-store';
 import { PurchaseStatusBadge } from '@/components/purchases/purchase-status-badge';
 import { useOpsStore } from '@/lib/ops-store';
 import { useProductCatalog } from '@/lib/product-catalog';
@@ -44,6 +46,7 @@ export default function SupplierLedgerPage({
   const { id } = use(params);
   const supplierId = Number(id);
   const { t } = useI18n();
+  const { company } = useCompanyStore();
   const catalog = useProductCatalog();
   const supplier = useOpsStore((store) => store.suppliers.find((row) => row.id === supplierId));
   const orders = useOpsStore((s) => s.purchaseOrders.filter((o) => o.supplierId === supplierId));
@@ -139,13 +142,17 @@ export default function SupplierLedgerPage({
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <BrandDocumentHeader
+        company={company}
+        title={supplier.name}
+        subtitle={`${supplier.code} · ${supplier.country}`}
+      />
+
       <section className="overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
         <div className="relative bg-gradient-to-bl from-orange-50 via-white to-amber-50/40 px-5 py-6 sm:px-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-gradient-to-br from-orange-400 to-amber-600 text-2xl font-bold text-white shadow-lg shadow-orange-200/60">
-                {supplier.name.slice(0, 1)}
-              </div>
+              <CompanyLogo company={company} size="lg" />
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">

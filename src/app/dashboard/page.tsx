@@ -43,7 +43,7 @@ export default function DashboardPage() {
   const pnlOk = canViewProfitLoss(role, profitLossRoles);
   const fin = financialSummary[company];
   const companyLabel =
-    company === 'arya' ? t('companyArya') : company === 'turkmen' ? t('companyTurkmen') : t('companyBoth');
+    company === 'arya' ? t('companyArya') : t('companyTurkmen');
 
   const kpiCards = [
     {
@@ -137,10 +137,8 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <div className="xl:col-span-1">
-          <ExchangeAccountsCard />
-        </div>
+      <section>
+        <ExchangeAccountsCard />
       </section>
 
       <section className="hidden lg:block">

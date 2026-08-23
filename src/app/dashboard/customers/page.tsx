@@ -24,6 +24,7 @@ import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/
 import { TableEmpty } from '@/components/shared/table-empty';
 import { Dialog } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { BrandDocumentHeader } from '@/components/brand/company-logo';
 import { useCompanyStore } from '@/lib/company-store';
 import { emptyGoods, goodsValue, products, sumGoods, type CustomerRecord } from '@/lib/demo-data';
 import { useOpsStore } from '@/lib/ops-store';
@@ -81,10 +82,17 @@ export default function CustomersPage() {
   const colSpan = 7 + products.length;
   const totalCash = mapped.reduce((s, c) => s + c.cash, 0);
   const totalGoods = mapped.reduce((s, c) => s + c.goodsVal, 0);
-  const debtors = mapped.filter((c) => c.cash < 0).length;
+  const debtors = mapped.filter((c) => c.cash < 0);
+  const totalDebt = debtors.reduce((s, c) => s + Math.abs(c.cash), 0);
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <BrandDocumentHeader
+        company={company}
+        title={t('pageCustomers')}
+        subtitle="لیست مشتریان — بیلانس، حساب نقدی، حساب جنسی، بدهکاری"
+      />
+
       <PageHeader
         title={t('pageCustomers')}
         description="لیست مشتریان — بیلانس، حساب نقدی، حساب جنسی، مقدار هر نوع کالا، وضعیت حساب"
@@ -115,6 +123,9 @@ export default function CustomersPage() {
               }))}
             />
             <CompanySwitcher />
+            <Link href="/dashboard/customers/receivables-matrix">
+              <Button variant="outline">ماتریس بدهکاری</Button>
+            </Link>
             <Link href="/dashboard/customers/summary">
               <Button variant="outline">خلاصه دو شرکت</Button>
             </Link>
@@ -126,12 +137,13 @@ export default function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {[
           { label: 'تعداد مشتریان', value: String(mapped.length), icon: Users, tone: 'bg-violet-50 text-violet-600' },
           { label: 'جمع بیلانس نقدی', value: formatCurrency(totalCash), icon: Wallet, tone: 'bg-sky-50 text-sky-600', valueClass: balanceClass(totalCash) },
           { label: 'ارزش حساب جنسی', value: formatCurrency(totalGoods), icon: Boxes, tone: 'bg-teal-50 text-teal-600' },
-          { label: 'مشتریان بدهکار', value: String(debtors), icon: AlertTriangle, tone: 'bg-rose-50 text-rose-600' },
+          { label: 'مشتریان بدهکار', value: String(debtors.length), icon: AlertTriangle, tone: 'bg-rose-50 text-rose-600' },
+          { label: 'جمع بدهکاری', value: formatCurrency(totalDebt), icon: Wallet, tone: 'bg-red-50 text-red-600' },
         ].map((k) => {
           const Icon = k.icon;
           return (

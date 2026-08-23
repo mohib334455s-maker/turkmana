@@ -109,19 +109,12 @@ const themes: Record<string, NavIconTheme> = {
     cardBg: 'from-lime-50/60 to-white', cardBorder: 'border-lime-100 hover:border-lime-200',
     dot: 'bg-lime-500', childActive: 'bg-lime-50 text-lime-900 border-lime-100',
   },
-  hr: {
+    hr: {
     iconBg: 'bg-rose-50', iconText: 'text-rose-600', iconBorder: 'border-rose-100',
     activeIconBg: 'bg-rose-100', activeIconText: 'text-rose-700', activeIconBorder: 'border-rose-200',
     navActiveBg: 'bg-rose-50', navActiveText: 'text-rose-900',
     cardBg: 'from-rose-50/60 to-white', cardBorder: 'border-rose-100 hover:border-rose-200',
     dot: 'bg-rose-400', childActive: 'bg-rose-50 text-rose-800 border-rose-100',
-  },
-  documents: {
-    iconBg: 'bg-fuchsia-50', iconText: 'text-fuchsia-600', iconBorder: 'border-fuchsia-100',
-    activeIconBg: 'bg-fuchsia-100', activeIconText: 'text-fuchsia-700', activeIconBorder: 'border-fuchsia-200',
-    navActiveBg: 'bg-fuchsia-50', navActiveText: 'text-fuchsia-900',
-    cardBg: 'from-fuchsia-50/60 to-white', cardBorder: 'border-fuchsia-100 hover:border-fuchsia-200',
-    dot: 'bg-fuchsia-400', childActive: 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-100',
   },
   reports: {
     iconBg: 'bg-cyan-50', iconText: 'text-cyan-700', iconBorder: 'border-cyan-100',
@@ -165,7 +158,6 @@ const topBars: Record<string, string> = {
   finance: 'bg-teal-500',
   exchange: 'bg-lime-500',
   hr: 'bg-rose-500',
-  documents: 'bg-fuchsia-500',
   reports: 'bg-cyan-500',
   notifications: 'bg-amber-500',
   settings: 'bg-slate-500',

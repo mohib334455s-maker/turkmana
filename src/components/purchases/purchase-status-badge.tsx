@@ -23,6 +23,6 @@ export function useCompanyName() {
   return (company: string) => {
     if (company === 'arya') return t('companyArya');
     if (company === 'turkmen') return t('companyTurkmen');
-    return t('companyBoth');
+    return company;
   };
 }

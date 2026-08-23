@@ -1,20 +1,17 @@
-# Turkman ERP
+# ERP System
 
-سیستم عملیاتی بازرگانی نفت و کالا (آریا / ترکمن) — Next.js + PostgreSQL.
+سیستم عملیاتی بازرگانی (آزیا آریا لمتید / ترکمن) — Next.js
 
 ## ورود
 
-| نام کاربری | رمز | شرکت |
-|------------|-----|------|
-| `turkman` | `aria1234` | هر دو شرکت (آریا و ترکمن) |
+| نام کاربری | رمز | دسترسی |
+|------------|-----|--------|
+| `turkman` | `turkman` | سوئیچ بین آزیا و ترکمن (ادمین) |
 
 ## اجرای محلی
 
 ```bash
 npm install
-npm run db:up
-npm run db:push
-npm run db:seed
 npm run dev
 ```
 
@@ -22,26 +19,13 @@ npm run dev
 
 برای کار بدون دیتابیس در `.env` بگذارید: `DEMO_AUTH=true`
 
-## استقرار روی Vercel
+## ویژگی‌ها
 
-1. ریپو را به Vercel وصل کنید (Import Git Repository).
-2. Framework: **Next.js** — دستور ساخت پیش‌فرض کافی است.
-3. Environment Variables:
+- سوئیچ شرکت: آزیا آریا لمتید یا ترکمن (لوگو و داده‌های همان شرکت)
+- قرارداد، خرید، فروش، مشتری، تأمین‌کننده، گدام، مالی
+- خروجی PDF/Excel با برند شرکت انتخاب‌شده
+- بکاپ و بازیابی داده در تنظیمات
 
-| متغیر | مقدار پیشنهادی |
-|--------|----------------|
-| `DEMO_AUTH` | `true` |
-| `JWT_SECRET` | یک رشته تصادفی بلند |
-| `NODE_ENV` | `production` |
+## استقرار
 
-`DATABASE_URL` برای دمو لازم نیست. بعداً اگر Postgres واقعی وصل کردید، `DEMO_AUTH=false` بگذارید.
-
-4. Deploy. ورود با حساب‌های دمو بالا.
-
-## اسکریپت‌ها
-
-- `npm run dev` — سرور توسعه
-- `npm run build` — ساخت تولید
-- `npm run db:up` — PostgreSQL توکار
-- `npm run db:push` — اعمال اسکیما
-- `npm run db:seed` — داده اولیه
+Framework: **Next.js** — مناسب Vercel یا هر هاست Node.js

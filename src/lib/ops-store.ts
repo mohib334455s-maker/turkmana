@@ -84,6 +84,16 @@ type ResellFromCustomerInput = {
   notes?: string;
 };
 
+type CustomerCashTxnInput = {
+  customerId: number;
+  company: CompanyKey;
+  amount: number;
+  txnType: 'receipt' | 'payment';
+  date: string;
+  details?: string;
+  notes?: string;
+};
+
 type ExpenseAccountInput = Omit<ExpenseAccount, 'id'>;
 type ExpenseEntryInput = Omit<ExpenseEntry, 'id'>;
 
@@ -143,6 +153,7 @@ type OpsState = {
   sellFromLot: (lotId: number, qty: number) => boolean;
   sellToCustomer: (input: SellToCustomerInput) => CustomerGoodsLot | null;
   resellFromCustomer: (input: ResellFromCustomerInput) => GoodsResale | null;
+  recordCustomerCashTxn: (input: CustomerCashTxnInput) => boolean;
   addExpenseAccount: (input: ExpenseAccountInput) => ExpenseAccount;
   addExpenseEntry: (input: ExpenseEntryInput) => ExpenseEntry | null;
   removeExpenseEntry: (id: number) => void;
@@ -265,7 +276,9 @@ function patchCustomerBalances(
     if (c.id !== customerId) return c;
     const current = c.companies[company];
     const goods = { ...(current.goods ?? emptyGoods()) };
-    goods[productCode] = (goods[productCode] ?? 0) + qtyDelta;
+    if (productCode && qtyDelta) {
+      goods[productCode] = (goods[productCode] ?? 0) + qtyDelta;
+    }
     return {
       ...c,
       lastTxn,
@@ -816,6 +829,48 @@ export const useOpsStore = create<OpsState>()(
           customers,
         });
         return resale;
+      },
+
+      recordCustomerCashTxn: (input) => {
+        const customer = get().customers.find((c) => c.id === input.customerId);
+        const amount = Number(input.amount);
+        if (!customer || amount <= 0) return false;
+        const cashDelta = input.txnType === 'receipt' ? amount : -amount;
+        const details =
+          input.details ||
+          (input.txnType === 'receipt'
+            ? `رسید نقدی ${amount} از ${customer.name}`
+            : `پرداخت ${amount} به ${customer.name}`);
+        set({
+          customers: patchCustomerBalances(
+            get().customers,
+            customer.id,
+            input.company,
+            '',
+            0,
+            cashDelta,
+            input.date
+          ),
+          customerLedgers: appendCustomerLedger(get().customerLedgers, customer.id, {
+            dateJalali: jalaliFromIso(input.date),
+            dateGregorian: input.date,
+            party: customer.name,
+            details,
+            product: '',
+            qty: 0,
+            unitPrice: 0,
+            loading: 0,
+            totalPrice: input.txnType === 'payment' ? amount : 0,
+            receipt: input.txnType === 'receipt' ? amount : 0,
+            warehouse: '',
+            notes: input.notes || '',
+            company: input.company,
+            txnType: input.txnType,
+            goodsDelta: 0,
+            cashDelta,
+          }),
+        });
+        return true;
       },
 
       addExpenseAccount: (input) => {

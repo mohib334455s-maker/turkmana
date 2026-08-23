@@ -3,12 +3,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type CompanyFilter = 'arya' | 'turkmen' | 'both';
+export type CompanyFilter = 'arya' | 'turkmen';
 
 export const COMPANY_LABELS: Record<CompanyFilter, string> = {
-  arya: 'آریا',
+  arya: 'آزیا آریا لمتید',
   turkmen: 'ترکمن',
-  both: 'هر دو شرکت',
 };
 
 interface CompanyState {
@@ -19,10 +18,21 @@ interface CompanyState {
 export const useCompanyStore = create<CompanyState>()(
   persist(
     (set) => ({
-      company: 'both',
+      company: 'turkmen',
       setCompany: (company) => set({ company }),
     }),
-    { name: 'erp-company-filter' }
+    {
+      name: 'erp-company-filter',
+      version: 3,
+      migrate: (persisted) => {
+        const state = persisted as { company?: string; state?: { company?: string } };
+        const raw = state?.company ?? state?.state?.company;
+        if (raw === 'arya' || raw === 'turkmen') {
+          return { company: raw };
+        }
+        return { company: 'turkmen' as CompanyFilter };
+      },
+    }
   )
 );
 
@@ -30,7 +40,5 @@ export function matchesCompany(
   itemCompany: 'arya' | 'turkmen' | 'both',
   filter: CompanyFilter
 ): boolean {
-  if (filter === 'both') return true;
-  if (itemCompany === 'both') return true;
   return itemCompany === filter;
 }

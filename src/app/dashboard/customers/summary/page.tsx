@@ -63,7 +63,7 @@ export default function CustomersSummaryPage() {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title={t('pageCustomersSummary')}
-        description={`وضعیت حساب مشتری در هر دو شرکت + ماتریس خرید/بارگیری/باقی — فیلتر: ${COMPANY_LABELS[company]}`}
+        description={`وضعیت حساب مشتری — ${COMPANY_LABELS[company]}`}
         actions={
           <>
             <ExportButtons
@@ -160,24 +160,7 @@ export default function CustomersSummaryPage() {
                       <TableCell className="num">{formatCurrency(goodsVal)}</TableCell>
                       {products.map((p) => (
                         <TableCell key={p.code} className="num">
-                          {company === 'both' ? (
-                            <div className="space-y-0.5 text-xs">
-                              <div>
-                                <Badge variant="muted" className="ml-1">
-                                  آ
-                                </Badge>
-                                {formatNumber(c.companies.arya.goods[p.code] ?? 0, 0)}
-                              </div>
-                              <div>
-                                <Badge variant="info" className="ml-1">
-                                  ت
-                                </Badge>
-                                {formatNumber(c.companies.turkmen.goods[p.code] ?? 0, 0)}
-                              </div>
-                            </div>
-                          ) : (
-                            formatNumber(goods[p.code] ?? 0, 0)
-                          )}
+                          {formatNumber(goods[p.code] ?? 0, 0)}
                         </TableCell>
                       ))}
                       <TableCell>{statusBadge(aryaCash)}</TableCell>
@@ -236,11 +219,7 @@ export default function CustomersSummaryPage() {
                         <ExtraRow
                           key={p.code}
                           label={p.name}
-                          value={
-                            company === 'both'
-                              ? `آ ${formatNumber(c.companies.arya.goods[p.code] ?? 0, 0)} · ت ${formatNumber(c.companies.turkmen.goods[p.code] ?? 0, 0)}`
-                              : formatNumber(goods[p.code] ?? 0, 0)
-                          }
+                          value={formatNumber(goods[p.code] ?? 0, 0)}
                         />
                       ))}
                       footer={

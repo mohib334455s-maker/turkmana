@@ -67,11 +67,13 @@ export function DesktopQuickBar() {
   return (
     <div
       ref={rootRef}
-      className="pointer-events-none fixed bottom-6 left-6 z-40 hidden lg:block"
+      className="pointer-events-none fixed bottom-6 left-1/2 z-40 hidden -translate-x-1/2 lg:block"
     >
       <div className="pointer-events-auto relative flex items-end gap-3">
         {open ? (
-          <div className="absolute bottom-[4.25rem] start-0 w-72 origin-bottom-left animate-fade-in rounded-[24px] border border-emerald-100/80 bg-white/95 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-xl">
+          <div
+            className="absolute bottom-[4.25rem] left-1/2 w-72 -translate-x-1/2 origin-bottom animate-fade-in rounded-[24px] border border-emerald-100/80 bg-white/95 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-xl"
+          >
             <div className="mb-1 flex items-center justify-between px-3 pb-1 pt-2">
               <p className="text-xs font-bold text-slate-800">افزودن سریع</p>
               <button

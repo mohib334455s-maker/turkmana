@@ -2,9 +2,8 @@ import type { CrudModuleConfig, FieldDef, StatusMeta } from '@/components/shared
 import { demoRows } from '@/lib/modules/demo-rows';
 
 const companyOptions = [
-  { value: 'arya', label: 'آریا|Arya' },
+  { value: 'arya', label: 'آزیا آریا لمتید|Azya Aria Ltd' },
   { value: 'turkmen', label: 'ترکمن|Turkmen' },
-  { value: 'both', label: 'هر دو|Both' },
 ];
 
 const docStatus: Record<string, StatusMeta> = {
@@ -742,58 +741,6 @@ export const modules = {
     initialRows: demoRows.attendance,
   },
 
-  documents: {
-    title: 'مرکز اسناد',
-    description: 'آرشیو اسناد و مدارک عملیاتی',
-    entityName: 'سند|Voucher',
-    statusMap: docStatus,
-    fields: [
-      { key: 'code', label: 'کد سند', required: true, list: true, search: true },
-      { key: 'title', label: 'عنوان', required: true, list: true, search: true },
-      { key: 'category', label: 'دسته', type: 'select' as const, options: [
-        { value: 'contract', label: 'قرارداد' },
-        { value: 'invoice', label: 'فاکتور' },
-        { value: 'customs', label: 'گمرک' },
-        { value: 'bank', label: 'بانکی' },
-        { value: 'other', label: 'سایر' },
-      ], list: true },
-      { key: 'relatedTo', label: 'مرتبط با', list: true, search: true },
-      { key: 'date', label: 'تاریخ|Date', type: 'date' as const, list: true },
-      { key: 'fileName', label: 'نام فایل', list: true },
-      companyField(),
-      statusField([
-        { value: 'active', label: 'فعال|Active' },
-        { value: 'archived', label: 'آرشیو|Archived' },
-      ]),
-      notesField(),
-    ],
-    initialRows: demoRows.documents,
-  },
-
-  guarantees: {
-    title: 'ضمانت‌نامه بانکی',
-    description: 'پیگیری ضمانت‌نامه‌ها و سررسیدها',
-    entityName: 'ضمانت‌نامه|Guarantee',
-    statusMap: docStatus,
-    fields: [
-      { key: 'code', label: 'شماره', required: true, list: true, search: true },
-      { key: 'bank', label: 'بانک صادرکننده', required: true, list: true },
-      { key: 'beneficiary', label: 'ذینفع', required: true, list: true, search: true },
-      { key: 'amount', label: 'مبلغ|Amount', type: 'number' as const, money: true, list: true },
-      { key: 'issueDate', label: 'تاریخ صدور', type: 'date' as const, list: true },
-      { key: 'expireDate', label: 'تاریخ انقضا', type: 'date' as const, list: true },
-      { key: 'relatedContract', label: 'قرارداد مرتبط', list: true, search: true },
-      companyField(),
-      statusField([
-        { value: 'active', label: 'معتبر' },
-        { value: 'pending', label: 'در تمدید' },
-        { value: 'inactive', label: 'منقضی' },
-      ]),
-      notesField(),
-    ],
-    initialRows: demoRows.guarantees,
-  },
-
   executiveReport: {
     title: 'گزارش اجرایی',
     description: 'خلاصه شاخص‌های کلیدی مدیریتی',
@@ -945,7 +892,7 @@ export const modules = {
         options: [
           { value: 'arya', label: 'فقط آریا|Arya only' },
           { value: 'turkmen', label: 'فقط ترکمن|Turkmen only' },
-          { value: 'both', label: 'هر دو شرکت (فقط با تأیید ادمین)|Both (admin grant)' },
+          { value: 'both', label: 'آریا و ترکمن (سوئیچ)|Arya & Turkmen (switch)' },
         ],
         required: true,
         list: true,

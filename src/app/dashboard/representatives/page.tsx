@@ -172,6 +172,7 @@ export default function RepresentativesPage() {
                         <TableCell>
                           <RecordActions
                             title={r.name}
+                            detailHref={`/dashboard/representatives/${r.id}`}
                             row={{
                               name: r.name,
                               code: r.code,
@@ -234,7 +235,9 @@ export default function RepresentativesPage() {
                     }
                     footer={
                       <RecordActions
+                        layout="buttons"
                         title={r.name}
+                        detailHref={`/dashboard/representatives/${r.id}`}
                         row={{
                           name: r.name,
                           code: r.code,

@@ -28,12 +28,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExportButtons } from '@/components/shared/export-buttons';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
-import { matchesCompany, useCompanyStore } from '@/lib/company-store';
+import { matchesCompany, useCompanyStore, COMPANY_LABELS } from '@/lib/company-store';
 import { customerTxnLabels } from '@/lib/customer-ledger';
 import { products } from '@/lib/demo-data';
 import { useOpsStore } from '@/lib/ops-store';
 import { CustomerResaleDialog, CustomerSaleDialog } from '@/components/customers/customer-trade-dialogs';
 import { RelatedJournal } from '@/components/journal/related-journal';
+import { BrandDocumentHeader, CompanyLogo } from '@/components/brand/company-logo';
+import {
+  customerDebtBreakdown,
+  resolveCustomerBalances,
+} from '@/lib/customer-balances';
+import { exportToPdf } from '@/lib/export';
+import { todayIso } from '@/lib/purchase-flow';
+import { Dialog } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import type { CompanyKey } from '@/lib/demo-data';
 import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
 
 const txnBadgeVariant = (txnType: string) => {
@@ -55,11 +66,14 @@ export default function CustomerLedgerPage({
   const ledgers = useOpsStore((s) => s.customerLedgers);
   const customerLots = useOpsStore((s) => s.customerGoodsLots);
   const resales = useOpsStore((s) => s.goodsResales);
+  const recordCustomerCashTxn = useOpsStore((s) => s.recordCustomerCashTxn);
   const ledger = (ledgers[customerId] ?? []).filter((r) =>
     matchesCompany(r.company, company)
   );
   const [saleOpen, setSaleOpen] = useState(false);
   const [resaleOpen, setResaleOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptDraft, setReceiptDraft] = useState({ amount: '', notes: '', company: 'arya' as CompanyKey });
   const openLots = useMemo(
     () => customerLots.filter((l) => l.customerId === customerId && l.qtyRemaining > 0),
     [customerLots, customerId]
@@ -76,8 +90,10 @@ export default function CustomerLedgerPage({
     );
   }
 
-  const cashBalance = ledger.at(-1)?.cashBalance ?? 0;
-  const goodsBalance = ledger.at(-1)?.goodsBalance ?? 0;
+  const balances = resolveCustomerBalances(customer, company, ledger);
+  const debtInfo = customerDebtBreakdown(customer);
+  const cashBalance = balances.cashBalance;
+  const goodsBalance = balances.goodsBalance;
   const resaleRows = ledger.filter((r) => r.txnType === 'resale' || r.txnType === 'takeback');
   const resaleProfit = resales
     .filter((r) => r.sourceCustomerId === customerId)
@@ -124,14 +140,37 @@ export default function CustomerLedgerPage({
 
   return (
     <div className="min-w-0 space-y-6 animate-fade-in">
+      <BrandDocumentHeader
+        company={company}
+        title={customer.name}
+        subtitle={`${customer.code} · ${customer.phone}`}
+        actions={
+          <>
+            <Button size="sm" className="bg-emerald-500 text-white" onClick={() => setReceiptOpen(true)}>
+              <Wallet className="ml-2 h-4 w-4" />
+              ثبت رسید
+            </Button>
+            <Button size="sm" variant="outline" className="border-white/30 bg-white/10 text-white" onClick={() =>
+              exportToPdf(
+                `صورت حساب ${customer.name}`,
+                exportColumns,
+                exportRows,
+                { company, subtitle: customer.code }
+              )
+            }>
+              <Printer className="ml-2 h-4 w-4" />
+              چاپ
+            </Button>
+          </>
+        }
+      />
+
       {/* Profile header */}
       <section className="overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
         <div className="relative bg-gradient-to-bl from-teal-50 via-white to-cyan-50/40 px-5 py-6 sm:px-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-gradient-to-br from-teal-400 to-teal-600 text-2xl font-bold text-white shadow-lg shadow-teal-200/60">
-                {customer.name.slice(0, 1)}
-              </div>
+              <CompanyLogo company={company} size="lg" />
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
@@ -144,6 +183,9 @@ export default function CustomerLedgerPage({
                         ? 'بدهکار'
                         : 'فعال'}
                   </Badge>
+                  {balances.debtAmount > 0 ? (
+                    <Badge variant="danger">بدهی: {formatCurrency(balances.debtAmount)}</Badge>
+                  ) : null}
                 </div>
                 <p className="mt-1 text-sm text-slate-500">
                   <span className="num">{customer.code}</span>
@@ -166,7 +208,14 @@ export default function CustomerLedgerPage({
                 columns={exportColumns}
                 rows={exportRows}
               />
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() =>
+                exportToPdf(
+                  `صورت حساب ${customer.name}`,
+                  exportColumns,
+                  exportRows,
+                  { company }
+                )
+              }>
                 <Printer className="ml-2 h-4 w-4" />
                 چاپ
               </Button>
@@ -239,11 +288,122 @@ export default function CustomerLedgerPage({
 
       <Tabs defaultValue="ledger">
         <TabsList className="w-full flex-wrap justify-start gap-1 rounded-2xl bg-slate-100 p-1 sm:w-auto">
+          <TabsTrigger value="debts" className="rounded-xl">بدهکاری</TabsTrigger>
           <TabsTrigger value="ledger" className="rounded-xl">دفتر کل</TabsTrigger>
           <TabsTrigger value="goods" className="rounded-xl">خلاصه کالاها</TabsTrigger>
           <TabsTrigger value="info" className="rounded-xl">اطلاعات کلی</TabsTrigger>
           <TabsTrigger value="activity" className="rounded-xl">فعالیت اخیر</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="debts">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="rounded-[22px] border-rose-100 bg-rose-50/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-rose-900">خلاصه بدهکاری</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3">
+                  <span className="text-sm text-slate-600">جمع بدهی نقدی ({COMPANY_LABELS[company]})</span>
+                  <span className="text-lg font-extrabold num text-rose-700">
+                    {formatCurrency(debtInfo.totalDebt)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3">
+                  <span className="text-sm text-slate-600">بیلانس کل نقدی</span>
+                  <span className={`text-lg font-extrabold num ${balanceClass(debtInfo.totalCash)}`}>
+                    {formatCurrency(debtInfo.totalCash)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3">
+                  <span className="text-sm text-slate-600">ارزش حساب جنسی (فیلتر فعلی)</span>
+                  <span className="text-lg font-extrabold num text-teal-700">
+                    {formatCurrency(balances.goodsValue)}
+                  </span>
+                </div>
+                <Button className="w-full" onClick={() => setReceiptOpen(true)}>
+                  <Wallet className="ml-2 h-4 w-4" />
+                  ثبت رسید دریافت
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[22px] border-slate-100">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">تفکیک آریا / ترکمن</CardTitle>
+              </CardHeader>
+              <CardContent className="px-0 pb-4">
+                <div className="table-scroll">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>شرکت</TableHead>
+                        <TableHead>بیلانس نقدی</TableHead>
+                        <TableHead>ارزش جنسی</TableHead>
+                        <TableHead>بدهی</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {debtInfo.rows.map((row) => (
+                        <TableRow key={row.company}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <CompanyLogo company={row.company} size="sm" />
+                              {row.label}
+                            </div>
+                          </TableCell>
+                          <TableCell className={`num font-semibold ${balanceClass(row.cash)}`}>
+                            {formatCurrency(row.cash)}
+                          </TableCell>
+                          <TableCell className="num">{formatCurrency(row.goodsValue)}</TableCell>
+                          <TableCell className="num font-bold text-rose-700">
+                            {row.debt > 0 ? formatCurrency(row.debt) : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="mt-4 rounded-[22px] border-slate-100">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">بدهکاری به تفکیک کالا</CardTitle>
+            </CardHeader>
+            <CardContent className="px-0 pb-4">
+              <div className="table-scroll">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>کالا</TableHead>
+                      <TableHead>مقدار (فیلتر فعلی)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {products
+                      .filter((p) => (balances.goods[p.code] ?? 0) !== 0)
+                      .map((p) => (
+                        <TableRow key={p.code}>
+                          <TableCell>{p.name}</TableCell>
+                          <TableCell className="num">
+                            {formatNumber(balances.goods[p.code] ?? 0, 0)} {p.unit}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    {!products.some((p) => (balances.goods[p.code] ?? 0) !== 0) ? (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-center text-slate-500">
+                          بدهی جنسی ثبت نشده
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="ledger">
           <Card className="overflow-hidden rounded-[22px] border-slate-100 shadow-[0_8px_30px_rgba(15,23,42,0.045)]">
@@ -537,6 +697,70 @@ export default function CustomerLedgerPage({
       </Tabs>
 
       <RelatedJournal filter={{ customerId }} />
+
+      <Dialog
+        open={receiptOpen}
+        onClose={() => setReceiptOpen(false)}
+        title="ثبت رسید نقدی"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setReceiptOpen(false)}>
+              انصراف
+            </Button>
+            <Button
+              onClick={() => {
+                const amount = Number(receiptDraft.amount);
+                if (amount <= 0) return;
+                recordCustomerCashTxn({
+                  customerId,
+                  company: receiptDraft.company,
+                  amount,
+                  txnType: 'receipt',
+                  date: todayIso(),
+                  notes: receiptDraft.notes,
+                });
+                setReceiptOpen(false);
+                setReceiptDraft({ amount: '', notes: '', company: 'arya' });
+              }}
+            >
+              ذخیره رسید
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-3">
+          <div>
+            <Label>شرکت</Label>
+            <select
+              className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+              value={receiptDraft.company}
+              onChange={(e) =>
+                setReceiptDraft((d) => ({ ...d, company: e.target.value as CompanyKey }))
+              }
+            >
+              <option value="arya">آریا</option>
+              <option value="turkmen">ترکمن</option>
+            </select>
+          </div>
+          <div>
+            <Label>مبلغ رسید *</Label>
+            <Input
+              type="number"
+              value={receiptDraft.amount}
+              onChange={(e) => setReceiptDraft((d) => ({ ...d, amount: e.target.value }))}
+              dir="ltr"
+              className="text-left"
+            />
+          </div>
+          <div>
+            <Label>ملاحظات</Label>
+            <Input
+              value={receiptDraft.notes}
+              onChange={(e) => setReceiptDraft((d) => ({ ...d, notes: e.target.value }))}
+            />
+          </div>
+        </div>
+      </Dialog>
 
       <CustomerSaleDialog open={saleOpen} onClose={() => setSaleOpen(false)} customerId={customerId} />
       <CustomerResaleDialog

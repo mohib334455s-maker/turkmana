@@ -13,7 +13,6 @@ import {
   Ship,
   Landmark,
   Briefcase,
-  FolderOpen,
   Bell,
   Handshake,
   type LucideIcon,
@@ -205,18 +204,6 @@ export const navModules: NavModule[] = [
       { key: 'employees', href: '/dashboard/hr/employees' },
       { key: 'payroll', href: '/dashboard/hr/payroll' },
       { key: 'attendance', href: '/dashboard/hr/attendance' },
-    ],
-  },
-  {
-    key: 'documents',
-    descKey: 'documentsDesc',
-    icon: FolderOpen,
-    accent: 'text-fuchsia-600',
-    soft: 'from-fuchsia-500/15 to-fuchsia-500/5',
-    ring: 'ring-fuchsia-200/70',
-    children: [
-      { key: 'documentsCenter', href: '/dashboard/documents' },
-      { key: 'guarantees', href: '/dashboard/documents/guarantees' },
     ],
   },
   {

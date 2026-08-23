@@ -25,6 +25,7 @@ import { useOpsStore } from '@/lib/ops-store';
 import type { PurchaseInvoice, PurchaseStatus } from '@/lib/purchase-flow';
 import { formatCurrency } from '@/lib/utils';
 import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
+import { BrandDocumentHeader, CompanyLogo } from '@/components/brand/company-logo';
 
 export default function PurchaseInvoicesPage() {
   const { t } = useI18n();
@@ -48,6 +49,12 @@ export default function PurchaseInvoicesPage() {
         }))}
       />
 
+      <BrandDocumentHeader
+        company={company}
+        title={t('invTitle')}
+        subtitle={t('invDesc')}
+      />
+
       <PageHeader
         title={t('invTitle')}
         description={t('invDesc')}
@@ -56,6 +63,7 @@ export default function PurchaseInvoicesPage() {
             <ExportButtons
               filename="purchase-invoices"
               title={t('invTitle')}
+              company={company}
               columns={[
                 { key: 'code', label: t('colInvoice') },
                 { key: 'poCode', label: t('colLinkedOrder') },
@@ -77,9 +85,10 @@ export default function PurchaseInvoicesPage() {
 
       <p className="text-sm text-slate-500">{t('invoicesAutoCreated')}</p>
 
-      <Card>
-        <CardHeader className="pb-2">
+      <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-none">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
           <CardTitle className="text-base">{t('invTitle')}</CardTitle>
+          <CompanyLogo company={company} size="sm" />
         </CardHeader>
         <CardContent className="px-0 pb-4 lg:pb-0">
           <ResponsiveData

@@ -7,10 +7,14 @@ import { messages, type Locale, type MessageKey, type NavKey } from './messages'
 
 interface UiState {
   locale: Locale;
+  calendarType: 'jalali' | 'gregorian';
+  baseCurrency: string;
   sidebarCollapsed: boolean;
   mobileNavOpen: boolean;
   navExpanded: Record<string, boolean>;
   setLocale: (locale: Locale) => void;
+  setCalendarType: (type: 'jalali' | 'gregorian') => void;
+  setBaseCurrency: (currency: string) => void;
   toggleLocale: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
@@ -24,10 +28,14 @@ export const useUiStore = create<UiState>()(
   persist(
     (set, get) => ({
       locale: 'fa',
+      calendarType: 'jalali',
+      baseCurrency: 'USD',
       sidebarCollapsed: false,
       mobileNavOpen: false,
       navExpanded: {},
       setLocale: (locale) => set({ locale }),
+      setCalendarType: (calendarType) => set({ calendarType }),
+      setBaseCurrency: (baseCurrency) => set({ baseCurrency }),
       toggleLocale: () =>
         set({ locale: get().locale === 'fa' ? 'en' : 'fa' }),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),

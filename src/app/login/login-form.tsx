@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, Globe2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CompanyLogo } from '@/components/brand/company-logo';
 import { LocaleEffects } from '@/components/layout/locale-effects';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
 import { useAuthStore } from '@/lib/auth-store';
@@ -57,10 +58,9 @@ export function LoginForm() {
       <LocaleEffects />
 
       <aside className="hidden bg-[#0f766e] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-lg font-bold">
-            ت
-          </div>
+        <div className="flex items-center gap-4">
+          <CompanyLogo company="turkmen" size="md" />
+          <CompanyLogo company="arya" size="md" />
           <div>
             <p className="text-base font-bold">{t('appName')}</p>
             <p className="text-xs text-teal-100/80">{t('appTagline')}</p>
@@ -83,9 +83,7 @@ export function LoginForm() {
       <main className="flex min-h-[100dvh] flex-col">
         <header className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] sm:px-8">
           <div className="flex items-center gap-2.5 lg:invisible">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0f766e] text-sm font-bold text-white">
-              ت
-            </div>
+            <CompanyLogo company="turkmen" size="sm" />
             <p className="text-sm font-bold text-slate-900">{t('appName')}</p>
           </div>
           <button

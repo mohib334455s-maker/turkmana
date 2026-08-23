@@ -14,7 +14,6 @@ import {
   Droplets,
   FileSpreadsheet,
   FileText,
-  FolderOpen,
   GitBranch,
   Handshake,
   Hourglass,
@@ -106,9 +105,6 @@ const exactRoutes: Record<string, RouteModuleMeta> = {
   '/dashboard/hr/employees': { navKey: 'hr', icon: Users },
   '/dashboard/hr/payroll': { navKey: 'hr', icon: Wallet },
   '/dashboard/hr/attendance': { navKey: 'hr', icon: Clock },
-
-  '/dashboard/documents': { navKey: 'documents', icon: FolderOpen },
-  '/dashboard/documents/guarantees': { navKey: 'documents', icon: Shield },
 
   '/dashboard/reports': { navKey: 'reports', icon: BarChart3 },
   '/dashboard/reports/executive': { navKey: 'reports', icon: TrendingUp },

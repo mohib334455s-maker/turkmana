@@ -17,14 +17,13 @@ export function CompanySwitcher({ className }: { className?: string }) {
   const options = allowedCompanyFilters(companyAccess);
 
   useEffect(() => {
-    const next = clampCompany(company, companyAccess);
+    const next = clampCompany(company as CompanyFilter | 'both', companyAccess);
     if (next !== company) setCompany(next);
   }, [company, companyAccess, setCompany]);
 
   const labels: Record<CompanyFilter, string> = {
     arya: t('companyArya'),
     turkmen: t('companyTurkmen'),
-    both: t('companyBoth'),
   };
 
   if (options.length === 1) {

@@ -34,10 +34,9 @@ import {
 } from '@/lib/backup';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
 import { useCompanyStore, type CompanyFilter } from '@/lib/company-store';
+import { UserAccessCard } from '@/components/settings/user-access-panel';
 import { canManageUsers, useAuthStore } from '@/lib/auth-store';
 import { cn } from '@/lib/utils';
-
-const APP_VERSION = '2.4';
 
 type ModuleCard = {
   title: string;
@@ -58,6 +57,7 @@ export default function SettingsPage() {
   const setBaseCurrency = useUiStore((s) => s.setBaseCurrency);
   const { company, setCompany } = useCompanyStore();
   const role = useAuthStore((s) => s.role);
+  const companyAccess = useAuthStore((s) => s.companyAccess);
   const isAdmin = role === 'admin';
   const canManage = canManageUsers(role);
 
@@ -165,6 +165,13 @@ export default function SettingsPage() {
         </div>
       ) : null}
 
+      <UserAccessCard
+        role={role}
+        companyAccess={companyAccess}
+        title={t('yourAccessTitle')}
+        className="border-teal-100 bg-gradient-to-r from-teal-50/50 to-white"
+      />
+
       {/* General preferences */}
       <Card className="overflow-hidden rounded-[24px] border-slate-200/80 shadow-none">
         <div className="border-b border-slate-100 bg-gradient-to-r from-teal-50/80 to-emerald-50/40 px-6 py-5">
@@ -185,6 +192,7 @@ export default function SettingsPage() {
               <option value="fa">{t('persian')}</option>
               <option value="en">{t('english')}</option>
             </Select>
+            <p className="mt-1.5 text-[11px] text-slate-400">{t('languageHint')}</p>
           </div>
           <div>
             <Label>{t('defaultCompany')}</Label>
@@ -195,6 +203,7 @@ export default function SettingsPage() {
               <option value="arya">{t('companyArya')}</option>
               <option value="turkmen">{t('companyTurkmen')}</option>
             </Select>
+            <p className="mt-1.5 text-[11px] text-slate-400">{t('companyHint')}</p>
           </div>
           <div>
             <Label>{t('calendarType')}</Label>
@@ -205,15 +214,17 @@ export default function SettingsPage() {
               <option value="jalali">{t('jalali')}</option>
               <option value="gregorian">{t('gregorian')}</option>
             </Select>
+            <p className="mt-1.5 text-[11px] text-slate-400">{t('calendarHint')}</p>
           </div>
           <div>
             <Label>{t('currencyBase')}</Label>
             <Select value={baseCurrency} onChange={(e) => setBaseCurrency(e.target.value)}>
-              <option value="USD">USD</option>
-              <option value="AED">AED</option>
-              <option value="AFN">AFN</option>
-              <option value="EUR">EUR</option>
+              <option value="USD">USD — US Dollar</option>
+              <option value="AED">AED — UAE Dirham</option>
+              <option value="AFN">AFN — Afghan Afghani</option>
+              <option value="EUR">EUR — Euro</option>
             </Select>
+            <p className="mt-1.5 text-[11px] text-slate-400">{t('currencyHint')}</p>
           </div>
           <div className="flex items-center gap-3 sm:col-span-2">
             <Button
@@ -355,14 +366,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-        <CardContent className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-slate-100 bg-white p-4">
-            <div className="flex items-center gap-2 text-slate-500">
-              <Database className="h-4 w-4" />
-              <span className="text-xs font-medium">{t('systemVersion')}</span>
-            </div>
-            <p className="mt-2 text-lg font-extrabold text-slate-900">v{APP_VERSION}</p>
-          </div>
+        <CardContent className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl border border-slate-100 bg-white p-4">
             <div className="flex items-center gap-2 text-slate-500">
               <HardDrive className="h-4 w-4" />

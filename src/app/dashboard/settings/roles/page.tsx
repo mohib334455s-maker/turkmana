@@ -1,44 +1,54 @@
 'use client';
 
-import { Building2, Shield } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/shared/page-header';
 import { ExportButtons } from '@/components/shared/export-buttons';
 import { ModuleIcon } from '@/components/shared/module-icon';
+import {
+  RoleAccessMatrix,
+  UserAccessCard,
+} from '@/components/settings/user-access-panel';
 import { useI18n } from '@/lib/i18n/store';
 import { systemRoles } from '@/lib/roles';
 import { COMPANY_ACCESS_LABELS } from '@/lib/company-access';
 import { canGrantProfitLoss, usePermissionsStore } from '@/lib/permissions';
 import { useAuthStore, type UserRole } from '@/lib/auth-store';
 import { Button } from '@/components/ui/button';
+import type { CompanyAccess } from '@/lib/company-access';
 
-const companyRules = [
+const companyRules: Array<{
+  key: CompanyAccess;
+  titleFa: string;
+  titleEn: string;
+  bodyFa: string;
+  bodyEn: string;
+}> = [
   {
     key: 'arya',
-    titleFa: 'ورود جدا به شرکت آریا',
-    titleEn: 'Separate Arya login',
+    titleFa: 'فقط آزیا آریا لمتید',
+    titleEn: 'Azya Aria Ltd only',
     bodyFa: 'کاربر فقط داده، گدام، قرارداد و حساب‌های آریا را می‌بیند. سوئیچ ترکمن برایش ظاهر نمی‌شود.',
     bodyEn: 'User only sees Arya data, warehouses, contracts and ledgers. Turkmen switch is hidden.',
   },
   {
     key: 'turkmen',
-    titleFa: 'ورود جدا به شرکت ترکمن',
-    titleEn: 'Separate Turkmen login',
+    titleFa: 'فقط ترکمن',
+    titleEn: 'Turkmen only',
     bodyFa: 'کاربر فقط داده و عملیات ترکمن را می‌بیند. سوئیچ آریا برایش ظاهر نمی‌شود.',
     bodyEn: 'User only sees Turkmen operations. Arya switch is hidden.',
   },
   {
     key: 'both',
-    titleFa: 'هر دو شرکت — فقط با تأیید ادمین',
-    titleEn: 'Both companies — admin grant only',
-    bodyFa: 'ادمین می‌تواند برای یک کاربر دسترسی هر دو شرکت را باز کند. خود ادمین همیشه هر دو را دارد.',
-    bodyEn: 'Only an admin can grant both-company access. The admin account always has both.',
+    titleFa: 'آریا و ترکمن (سوئیچ)',
+    titleEn: 'Arya & Turkmen (switch)',
+    bodyFa: 'ادمین می‌تواند برای یک کاربر امکان جابه‌جایی بین دو شرکت را بدهد. هر بار فقط یک شرکت فعال است.',
+    bodyEn: 'Admin can grant switching between both companies. One active company at a time.',
   },
 ];
 
 export default function RolesPage() {
-  const { locale } = useI18n();
+  const { locale, t, tx } = useI18n();
   const isFa = locale === 'fa';
   const role = useAuthStore((s) => s.role);
   const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
@@ -48,11 +58,11 @@ export default function RolesPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title={isFa ? 'نقش‌ها و دسترسی شرکت' : 'Roles and company access'}
+        title={isFa ? 'نقش‌ها و دسترسی' : 'Roles & access'}
         description={
           isFa
-            ? 'نقش سطح عملیات را مشخص می‌کند؛ دسترسی شرکت (آریا / ترکمن / هر دو) جدا از نقش است و فقط ادمین هر دو را می‌دهد'
-            : 'Role defines operations; company access (Arya / Turkmen / both) is separate and only admin can grant both'
+            ? 'برای هر نقش: شرکت مجاز، ماژول‌ها، صفحات و صلاحیت‌های خاص (مثل مفاد و ضرر)'
+            : 'Per role: allowed company, modules, pages and special permissions (e.g. P&L)'
         }
         actions={
           <ExportButtons
@@ -72,6 +82,14 @@ export default function RolesPage() {
         }
       />
 
+      <section>
+        <h2 className="text-base font-extrabold text-slate-900">{t('accessMatrixTitle')}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t('accessMatrixDesc')}</p>
+        <div className="mt-4">
+          <RoleAccessMatrix />
+        </div>
+      </section>
+
       <Card className="border-amber-100">
         <CardContent className="space-y-3 p-5">
           <p className="text-[15px] font-extrabold text-slate-900">
@@ -79,8 +97,8 @@ export default function RolesPage() {
           </p>
           <p className="text-xs leading-6 text-slate-500">
             {isFa
-              ? 'بعضی نقش‌ها اصلاً نباید قسمت مفاد و ضرر را ببینند. فقط ادمین می‌تواند این صلاحیت را قید یا باز کند. انباردار و فروش به‌صورت پیش‌فرض بسته است.'
-              : 'Some roles must not see profit & loss. Only an admin can grant or revoke this. Warehouse and sales are off by default.'}
+              ? 'بعضی نقش‌ها اصلاً نباید قسمت مفاد و ضرر را ببینند. فقط ادمین می‌تواند این صلاحیت را قید یا باز کند.'
+              : 'Some roles must not see profit & loss. Only an admin can grant or revoke this.'}
           </p>
           <div className="flex flex-wrap gap-2">
             {systemRoles.map((r) => {
@@ -100,11 +118,6 @@ export default function RolesPage() {
               );
             })}
           </div>
-          {!canGrant ? (
-            <p className="text-[11px] text-slate-400">
-              {isFa ? 'فقط ادمین می‌تواند این تیک‌ها را عوض کند.' : 'Only an admin can change these ticks.'}
-            </p>
-          ) : null}
         </CardContent>
       </Card>
 
@@ -120,34 +133,35 @@ export default function RolesPage() {
                 {isFa ? rule.bodyFa : rule.bodyEn}
               </p>
               <p className="mt-3 text-[11px] text-slate-400">
-                {COMPANY_ACCESS_LABELS[rule.key as keyof typeof COMPANY_ACCESS_LABELS].fa}
+                {COMPANY_ACCESS_LABELS[rule.key].fa}
                 {' / '}
-                {COMPANY_ACCESS_LABELS[rule.key as keyof typeof COMPANY_ACCESS_LABELS].en}
+                {COMPANY_ACCESS_LABELS[rule.key].en}
               </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {systemRoles.map((role) => (
-          <Card key={role.key} className="border-slate-200 shadow-none">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <ModuleIcon icon={Shield} moduleKey="settings" size="md" />
-                <Badge variant="muted">{role.users}</Badge>
-              </div>
-              <p className="mt-3 text-[15px] font-extrabold text-slate-900">
-                {isFa ? role.titleFa : role.titleEn}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">
-                {isFa ? role.accessFa : role.accessEn}
-              </p>
-              <p className="mt-3 font-mono text-[11px] text-slate-400">{role.key}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <section>
+        <h2 className="text-base font-extrabold text-slate-900">
+          {tx('جزئیات کامل هر نقش', 'Full detail per role')}
+        </h2>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {systemRoles.map((roleDef) => {
+            const sampleCompany: CompanyAccess =
+              roleDef.key === 'admin' ? 'both' : 'arya';
+            return (
+              <UserAccessCard
+                key={roleDef.key}
+                role={roleDef.key}
+                companyAccess={sampleCompany}
+                title={isFa ? roleDef.titleFa : roleDef.titleEn}
+                subtitle={isFa ? roleDef.accessFa : roleDef.accessEn}
+              />
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

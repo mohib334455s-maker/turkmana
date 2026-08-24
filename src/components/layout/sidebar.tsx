@@ -127,13 +127,11 @@ export function Sidebar() {
             onClick={closeMobile}
             className="flex min-w-0 items-center gap-3 rounded-2xl px-1 py-1"
           >
-            <CompanyLogo company={company} size="md" className="shrink-0" />
+            <CompanyLogo company={company} size="md" className="shrink-0" dark />
             {!collapsed ? (
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-white">{companyName}</p>
-                <p className="truncate text-[11px] text-emerald-100/75">
-                  {t('appName')} · v2.4.0
-                </p>
+                <p className="truncate text-[11px] text-emerald-100/75">{t('appName')}</p>
               </div>
             ) : null}
           </Link>
@@ -142,7 +140,7 @@ export function Sidebar() {
               type="button"
               onClick={closeMobile}
               className="rounded-xl p-2 text-emerald-100/80 hover:bg-white/10 lg:hidden"
-              aria-label="بستن"
+              aria-label={t('close')}
             >
               <X className="h-5 w-5" />
             </button>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { FileText, Plus } from 'lucide-react';
+import { FileText, Plus, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,18 +24,20 @@ import { TableEmpty } from '@/components/shared/table-empty';
 import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
 import { emptyContract, useOpsStore } from '@/lib/ops-store';
-import { formatNumber } from '@/lib/utils';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 import type { CompanyKey } from '@/lib/demo-data';
 import { useI18n } from '@/lib/i18n/store';
 import { useProductCatalog } from '@/lib/product-catalog';
 import { MEASUREMENT_UNITS } from '@/lib/catalog-master';
 import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
 import { BrandDocumentHeader, CompanyLogo } from '@/components/brand/company-logo';
-import { exportContractDocument } from '@/lib/export';
+import { exportContractDocument, exportContractsListDocument } from '@/lib/export';
 import { isContractOpenForExpenses } from '@/lib/permissions';
+import { contractValue, paymentProgress } from '@/lib/contract-payments';
+import { notifyAdminChange } from '@/lib/activity-store';
 
 export default function ContractsPage() {
-  const { t, tn, locale } = useI18n();
+  const { t, tn, locale, tx } = useI18n();
   const catalog = useProductCatalog();
   const { company } = useCompanyStore();
   const items = useOpsStore((s) => s.contracts);
@@ -120,16 +122,47 @@ export default function ContractsPage() {
                 { key: 'supplierName', label: locale === 'en' ? 'Counterparty' : 'شرکت طرف' },
                 { key: 'product', label: locale === 'en' ? 'Product' : 'نوع جنس' },
                 { key: 'totalQty', label: locale === 'en' ? 'Total qty' : 'مقدار کل' },
-                { key: 'arrived', label: locale === 'en' ? 'Arrived' : 'آمد' },
-                { key: 'unloaded', label: locale === 'en' ? 'Unloaded' : 'تخلیه' },
-                { key: 'sold', label: locale === 'en' ? 'Sold' : 'فروش' },
-                { key: 'shortage', label: locale === 'en' ? 'Shortage' : 'کسری' },
-                { key: 'waste', label: locale === 'en' ? 'Waste' : 'ضایعات' },
-                { key: 'sellable', label: locale === 'en' ? 'Sellable' : 'قابل فروش' },
-                { key: 'transit', label: locale === 'en' ? 'Transit' : 'ترانزیت' },
-                { key: 'location', label: locale === 'en' ? 'Location' : 'محل' },
+                { key: 'paidPct', label: locale === 'en' ? 'Paid %' : 'پرداخت٪' },
+                { key: 'paidAmount', label: locale === 'en' ? 'Paid' : 'پرداخت‌شده' },
               ]}
-              rows={rows}
+              rows={rows.map((c) => {
+                const progress = paymentProgress(
+                  contractValue(c.totalQty, c.pricePerUnit),
+                  c.paidAmount || 0
+                );
+                return {
+                  ...c,
+                  paidPct: `${progress.percent}%`,
+                  paidAmount: progress.paidAmount,
+                };
+              })}
+              onPdf={() =>
+                exportContractsListDocument(
+                  rows.map((c) => {
+                    const progress = paymentProgress(
+                      contractValue(c.totalQty, c.pricePerUnit),
+                      c.paidAmount || 0
+                    );
+                    return {
+                      number: c.number,
+                      supplierName: c.supplierName,
+                      product: c.product,
+                      totalQty: c.totalQty,
+                      arrived: c.arrived,
+                      unloaded: c.unloaded,
+                      sold: c.sold,
+                      sellable: c.sellable,
+                      transit: c.transit,
+                      location: c.location,
+                      status: c.status,
+                      paidAmount: progress.paidAmount,
+                      paidPercent: progress.percent,
+                      contractValue: progress.contractVal,
+                    };
+                  }),
+                  { company, title: t('pageContracts') }
+                )
+              }
             />
             <CompanySwitcher />
             <Link href="/dashboard/parties">
@@ -145,10 +178,7 @@ export default function ContractsPage() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-none">
-          <CardContent className="relative p-4">
-            <div className="absolute end-3 top-3">
-              <CompanyLogo company={company === 'arya' ? 'arya' : 'turkmen'} size="sm" />
-            </div>
+          <CardContent className="p-4">
             <p className="text-xs text-slate-500">تعداد قرارداد فعال</p>
             <p className="mt-1 text-2xl font-bold num">{activeRows.length}</p>
           </CardContent>
@@ -169,6 +199,18 @@ export default function ContractsPage() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="rounded-2xl border border-teal-200 bg-teal-50/60 px-4 py-3 text-sm leading-relaxed text-teal-900">
+        <p className="font-bold">
+          {tx('ثبت پرداخت قرارداد از کجا؟', 'Where to record contract payment?')}
+        </p>
+        <p className="mt-1 text-teal-800">
+          {tx(
+            'روی شماره قرارداد کلیک کنید → در صفحه جزئیات بخش «پرداخت قرارداد» → دکمه «ثبت پرداخت». یا از ستون عملیات دکمه پرداخت را بزنید.',
+            'Click contract number → on detail page open «Contract payments» → «Record payment». Or use the payment button in the actions column.'
+          )}
+        </p>
       </div>
 
       <Card className="rounded-2xl border-slate-200 shadow-none">
@@ -194,19 +236,33 @@ export default function ContractsPage() {
                 <TableHead>ضایعات</TableHead>
                 <TableHead>قابل فروش</TableHead>
                 <TableHead>ترانزیت</TableHead>
+                <TableHead>پرداخت‌شده</TableHead>
+                <TableHead>پرداخت٪</TableHead>
                 <TableHead>محل</TableHead>
                 <TableHead>وضعیت</TableHead>
                 <TableHead>شرکت</TableHead>
-                <TableHead className="text-center">عملیات</TableHead>
+                <TableHead className="text-end">عملیات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
-                <TableEmpty colSpan={15} message="هنوز قراردادی ثبت نشده است" />
+                <TableEmpty colSpan={17} message="هنوز قراردادی ثبت نشده است" />
               ) : null}
-              {rows.map((c) => (
+              {rows.map((c) => {
+                const progress = paymentProgress(
+                  contractValue(c.totalQty, c.pricePerUnit),
+                  c.paidAmount || 0
+                );
+                return (
                 <TableRow key={c.id}>
-                  <TableCell className="font-semibold num">{c.number}</TableCell>
+                  <TableCell className="font-semibold num">
+                    <Link
+                      href={`/dashboard/contracts/${c.id}`}
+                      className="text-[var(--brand)] hover:underline"
+                    >
+                      {c.number}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <Link
                       href={`/dashboard/suppliers/${c.supplierId}`}
@@ -233,6 +289,10 @@ export default function ContractsPage() {
                     {formatNumber(c.sellable, 0)}
                   </TableCell>
                   <TableCell className="num">{formatNumber(c.transit, 0)}</TableCell>
+                  <TableCell className="num text-emerald-700">
+                    {formatCurrency(progress.paidAmount)}
+                  </TableCell>
+                  <TableCell className="num font-bold">{progress.percent}%</TableCell>
                   <TableCell>{c.location}</TableCell>
                   <TableCell>
                     <Button
@@ -253,7 +313,18 @@ export default function ContractsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/dashboard/contracts/${c.id}?pay=1`}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          title={tx('ثبت پرداخت', 'Record payment')}
+                          className="border-teal-200 text-teal-800"
+                        >
+                          <Wallet className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
                       <Button
                         type="button"
                         size="sm"
@@ -261,7 +332,7 @@ export default function ContractsPage() {
                         title="خروجی قرارداد"
                         className="border-emerald-200 text-emerald-800"
                         onClick={() =>
-                          exportContractDocument({
+                          void exportContractDocument({
                             id: c.id,
                             number: c.number,
                             supplierName: c.supplierName,
@@ -278,6 +349,8 @@ export default function ContractsPage() {
                             waste: c.waste,
                             sellable: c.sellable,
                             transit: c.transit,
+                            paidAmount: progress.paidAmount,
+                            contractValue: progress.contractVal,
                             parties: [],
                           })
                         }
@@ -313,12 +386,24 @@ export default function ContractsPage() {
                           sellable: Number(next.sellable ?? c.sellable),
                         });
                       }}
-                      onDelete={() => removeContract(c.id)}
+                      onDelete={() => {
+                        removeContract(c.id);
+                        notifyAdminChange({
+                          action: 'delete',
+                          module: 'contracts',
+                          moduleFa: 'قراردادها',
+                          moduleEn: 'Contracts',
+                          entityLabelFa: 'قرارداد',
+                          entityLabelEn: 'contract',
+                          entityName: c.number,
+                        });
+                      }}
                     />
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+              })}
             </TableBody>
           </Table>
               </div>
@@ -327,7 +412,12 @@ export default function ContractsPage() {
               rows.length === 0 ? (
                 <p className="py-10 text-center text-sm text-slate-500">هنوز قراردادی ثبت نشده است</p>
               ) : (
-                rows.map((c) => (
+                rows.map((c) => {
+                  const progress = paymentProgress(
+                    contractValue(c.totalQty, c.pricePerUnit),
+                    c.paidAmount || 0
+                  );
+                  return (
                   <MobileRecordCard
                     key={c.id}
                     title={c.supplierName}
@@ -340,9 +430,9 @@ export default function ContractsPage() {
                     }
                     metrics={[
                       { label: 'مقدار کل', value: formatNumber(c.totalQty, 0) },
+                      { label: 'پرداخت‌شده', value: formatCurrency(progress.paidAmount) },
+                      { label: 'پرداخت٪', value: `${progress.percent}%` },
                       { label: 'قابل فروش', value: formatNumber(c.sellable, 0) },
-                      { label: 'تاریخ / محل', value: c.location },
-                      { label: 'ترانزیت', value: formatNumber(c.transit, 0) },
                     ]}
                     extra={
                       <>
@@ -354,7 +444,14 @@ export default function ContractsPage() {
                       </>
                     }
                     footer={
-                      <RecordActions
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/dashboard/contracts/${c.id}?pay=1`}>
+                          <Button size="sm" variant="outline" className="border-teal-200 text-teal-800">
+                            <Wallet className="ml-2 h-4 w-4" />
+                            {tx('ثبت پرداخت', 'Payment')}
+                          </Button>
+                        </Link>
+                        <RecordActions
                         layout="buttons"
                         title="قرارداد"
                         detailHref={`/dashboard/contracts/${c.id}`}
@@ -386,9 +483,11 @@ export default function ContractsPage() {
                         }}
                         onDelete={() => removeContract(c.id)}
                       />
+                      </div>
                     }
                   />
-                ))
+                  );
+                })
               )
             }
           />

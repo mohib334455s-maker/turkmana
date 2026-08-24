@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       role: 'admin',
       email: 'turkman',
-      fullName: 'مدیر ترکمن',
+      fullName: 'ادمین سیستم',
       companyAccess: 'both',
       setSession: (session) =>
         set({

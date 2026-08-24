@@ -36,6 +36,7 @@ export default function ForeignContractSummaryPage() {
             <ExportButtons
               filename="foreign-contract-summary"
               title="خلاصه قرارداد خارجی"
+              company={company}
               columns={[
                 { key: 'supplier', label: 'شرکت' },
                 { key: 'contractNumber', label: 'شماره قرارداد' },

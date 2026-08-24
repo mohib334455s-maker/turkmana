@@ -218,7 +218,7 @@ export default function PartyDetailPage({
             size="sm"
             className="bg-emerald-500 text-white hover:bg-emerald-400"
             onClick={() =>
-              exportToPdf(
+              void exportToPdf(
                 `${locale === 'en' ? 'Party' : 'پارتی'} ${party.number}`,
                 [
                   { key: 'field', label: locale === 'en' ? 'Field' : 'فیلد' },

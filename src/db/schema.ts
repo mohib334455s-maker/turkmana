@@ -319,6 +319,8 @@ export const exchangeHouses = pgTable('exchange_houses', {
   code: varchar('code', { length: 100 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   phone: varchar('phone', { length: 50 }),
+  whatsapp: varchar('whatsapp', { length: 50 }),
+  contactPerson: varchar('contact_person', { length: 255 }),
   address: text('address'),
   // exchanger | joint | treasury — طلب و باقیات فقط روی exchanger جدا گزارش می‌شود
   kind: varchar('kind', { length: 30 }).notNull().default('exchanger'),

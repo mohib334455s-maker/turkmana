@@ -12,22 +12,41 @@ import { cn } from '@/lib/utils';
 
 type Size = 'sm' | 'md' | 'lg' | 'xl';
 
-const SIZE: Record<Size, { box: string; img: string; text: string }> = {
-  sm: { box: 'h-10 w-[4.5rem]', img: 'object-contain object-center', text: 'text-xs' },
-  md: { box: 'h-12 w-24', img: 'object-contain object-center', text: 'text-sm' },
-  lg: { box: 'h-16 w-32', img: 'object-contain object-center', text: 'text-base' },
-  xl: { box: 'h-20 w-40', img: 'object-contain object-center', text: 'text-lg' },
+const SIZE: Record<Size, { box: string; text: string }> = {
+  sm: { box: 'h-10 w-10', text: 'text-xs' },
+  md: { box: 'h-12 w-12', text: 'text-sm' },
+  lg: { box: 'h-16 w-16', text: 'text-base' },
+  xl: { box: 'h-20 w-20', text: 'text-lg' },
 };
 
-function LogoImage({ src, alt, size }: { src: string; alt: string; size: Size }) {
-  const s = SIZE[size];
+const ARYA_SIZE: Record<Size, string> = {
+  sm: 'h-10 w-[4.25rem]',
+  md: 'h-12 w-24',
+  lg: 'h-16 w-32',
+  xl: 'h-20 w-40',
+};
+
+function LogoImage({
+  src,
+  alt,
+  box,
+  dark,
+}: {
+  src: string;
+  alt: string;
+  box: string;
+  dark?: boolean;
+}) {
   return (
-    <div className={cn('relative shrink-0', s.box)}>
+    <div className={cn('relative shrink-0', box)}>
       <Image
         src={src}
         alt={alt}
         fill
-        className={s.img}
+        className={cn(
+          'object-contain object-center',
+          dark ? 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]' : 'drop-shadow-sm'
+        )}
         sizes="160px"
         priority
       />
@@ -36,7 +55,7 @@ function LogoImage({ src, alt, size }: { src: string; alt: string; size: Size })
 }
 
 /**
- * Company brand mark — official logos for Arya and Turkmen (transparent, no added background).
+ * Company brand mark — transparent official logos, no added background.
  */
 export function CompanyLogo({
   company,
@@ -63,13 +82,15 @@ export function CompanyLogo({
         <LogoImage
           src={ARYA_LOGO_SRC}
           alt={locale === 'en' ? 'Azya Aria Ltd' : 'آزیا آریا لمتید'}
-          size={size}
+          box={ARYA_SIZE[size]}
+          dark={dark}
         />
       ) : resolved === 'turkmen' ? (
         <LogoImage
           src={TURKMEN_LOGO_SRC}
           alt={locale === 'en' ? 'Turkmen' : 'ترکمن'}
-          size={size}
+          box={s.box}
+          dark={dark}
         />
       ) : (
         <div

@@ -34,7 +34,7 @@ import { balanceClass, cn, formatCurrency, formatNumber } from '@/lib/utils';
 type Customer = CustomerRecord;
 
 export default function CustomersPage() {
-  const { t } = useI18n();
+  const { t, tx } = useI18n();
   const { company } = useCompanyStore();
   const searchParams = useSearchParams();
   const storedCustomers = useOpsStore((s) => s.customers);
@@ -90,26 +90,32 @@ export default function CustomersPage() {
       <BrandDocumentHeader
         company={company}
         title={t('pageCustomers')}
-        subtitle="لیست مشتریان — بیلانس، حساب نقدی، حساب جنسی، بدهکاری"
+        subtitle={tx(
+          'لیست مشتریان — بیلانس، حساب نقدی، حساب جنسی، بدهکاری',
+          'Customer list — cash, goods balances and receivables'
+        )}
       />
 
       <PageHeader
         title={t('pageCustomers')}
-        description="لیست مشتریان — بیلانس، حساب نقدی، حساب جنسی، مقدار هر نوع کالا، وضعیت حساب"
+        description={tx(
+          'لیست مشتریان — بیلانس، حساب نقدی، حساب جنسی، مقدار هر نوع کالا، وضعیت حساب',
+          'Customers — cash balance, goods account, product quantities and status'
+        )}
         actions={
           <>
             <ExportButtons
               filename="customers"
-              title="لیست مشتریان"
+              title={tx('لیست مشتریان', 'Customers')}
               columns={[
-                { key: 'name', label: 'نام مشتری' },
-                { key: 'code', label: 'کد' },
-                { key: 'phone', label: 'تماس' },
-                { key: 'cash', label: 'بیلانس نقدی' },
-                { key: 'goodsVal', label: 'ارزش حساب جنسی' },
+                { key: 'name', label: tx('نام مشتری', 'Customer name') },
+                { key: 'code', label: tx('کد', 'Code') },
+                { key: 'phone', label: tx('تماس', 'Phone') },
+                { key: 'cash', label: tx('بیلانس نقدی', 'Cash balance') },
+                { key: 'goodsVal', label: tx('ارزش حساب جنسی', 'Goods value') },
                 ...products.map((p) => ({ key: p.code, label: p.name })),
-                { key: 'lastTxn', label: 'آخرین معامله' },
-                { key: 'status', label: 'وضعیت' },
+                { key: 'lastTxn', label: tx('آخرین معامله', 'Last transaction') },
+                { key: 'status', label: tx('وضعیت', 'Status') },
               ]}
               rows={mapped.map((c) => ({
                 name: c.name,

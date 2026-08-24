@@ -71,3 +71,25 @@ export function dualDateLabel(date: Date = new Date()) {
     gregorianLong: formatGregorianLong(date),
   };
 }
+
+export type CalendarType = 'jalali' | 'gregorian';
+
+/** Primary date for UI based on settings preference. */
+export function formatPreferredDate(
+  date: Date = new Date(),
+  calendar: CalendarType = 'jalali',
+  long = false
+) {
+  if (calendar === 'gregorian') {
+    return long ? formatGregorianLong(date) : formatGregorian(date);
+  }
+  return long ? formatJalaliLong(date) : formatJalali(date);
+}
+
+/** Secondary (other calendar) date for dual display. */
+export function formatSecondaryDate(
+  date: Date = new Date(),
+  calendar: CalendarType = 'jalali'
+) {
+  return calendar === 'gregorian' ? formatJalali(date) : formatGregorian(date);
+}

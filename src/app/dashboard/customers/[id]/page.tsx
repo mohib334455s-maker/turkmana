@@ -151,7 +151,7 @@ export default function CustomerLedgerPage({
               ثبت رسید
             </Button>
             <Button size="sm" variant="outline" className="border-white/30 bg-white/10 text-white" onClick={() =>
-              exportToPdf(
+              void exportToPdf(
                 `صورت حساب ${customer.name}`,
                 exportColumns,
                 exportRows,
@@ -209,7 +209,7 @@ export default function CustomerLedgerPage({
                 rows={exportRows}
               />
               <Button variant="outline" size="sm" onClick={() =>
-                exportToPdf(
+                void exportToPdf(
                   `صورت حساب ${customer.name}`,
                   exportColumns,
                   exportRows,

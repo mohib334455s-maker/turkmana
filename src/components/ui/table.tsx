@@ -55,7 +55,7 @@ export function TableHead({
   return (
     <th
       className={cn(
-        'h-8 px-1.5 text-right align-middle text-[10px] font-semibold text-slate-600 sm:px-2 sm:text-[11px]',
+        'h-9 whitespace-nowrap px-2 text-start align-middle text-[10px] font-bold text-slate-600 sm:px-3 sm:text-[11px]',
         className
       )}
       {...props}
@@ -70,7 +70,7 @@ export function TableCell({
   return (
     <td
       className={cn(
-        'max-w-[9rem] truncate px-1.5 py-1.5 align-middle text-slate-800 sm:max-w-[11rem] sm:px-2',
+        'max-w-[12rem] truncate px-2 py-2 text-start align-middle text-slate-800 sm:max-w-[14rem] sm:px-3',
         className
       )}
       {...props}

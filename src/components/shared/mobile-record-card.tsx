@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/store';
 
 export function MobileRecordCard({
   title,
@@ -26,6 +27,7 @@ export function MobileRecordCard({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const { tx } = useI18n();
 
   return (
     <article
@@ -65,7 +67,7 @@ export function MobileRecordCard({
             onClick={() => setOpen((v) => !v)}
             className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-teal-700"
           >
-            {open ? 'کمتر' : 'جزئیات بیشتر'}
+            {open ? tx('کمتر', 'Less') : tx('جزئیات بیشتر', 'More details')}
             <ChevronDown className={cn('h-3.5 w-3.5 transition', open && 'rotate-180')} />
           </button>
           {open ? <div className="mt-2 space-y-1.5 text-xs text-slate-600">{extra}</div> : null}
@@ -103,7 +105,7 @@ export function ExtraRow({ label, value }: { label: string; value: React.ReactNo
   return (
     <div className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 px-2.5 py-1.5">
       <span className="shrink-0 text-slate-400">{label}</span>
-      <span className="text-left font-medium text-slate-800">{value}</span>
+      <span className="min-w-0 text-end font-medium text-slate-800 break-words">{value}</span>
     </div>
   );
 }

@@ -12,37 +12,39 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const addItems = [
-  {
-    title: 'مشتری جدید',
-    hint: 'افزودن مشتری به دفتر حساب',
-    href: '/dashboard/customers?new=1',
-    icon: Users,
-    tone: 'bg-violet-50 text-violet-600',
-  },
-  {
-    title: 'محصول جدید',
-    hint: 'ثبت کالا در تنظیمات محصولات',
-    href: '/dashboard/settings/products?new=1',
-    icon: Package,
-    tone: 'bg-teal-50 text-teal-600',
-  },
-  {
-    title: 'تأمین‌کننده جدید',
-    hint: 'افزودن فروشنده خارجی',
-    href: '/dashboard/suppliers?new=1',
-    icon: Building2,
-    tone: 'bg-orange-50 text-orange-600',
-  },
-];
+import { useI18n } from '@/lib/i18n/store';
 
 export function DesktopQuickBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const onDashboard = pathname === '/dashboard' || pathname === '/dashboard/';
+
+  const addItems = [
+    {
+      title: t('quickAddCustomer'),
+      hint: t('quickAddCustomerHint'),
+      href: '/dashboard/customers?new=1',
+      icon: Users,
+      tone: 'bg-violet-50 text-violet-600',
+    },
+    {
+      title: t('quickAddProduct'),
+      hint: t('quickAddProductHint'),
+      href: '/dashboard/settings/products?new=1',
+      icon: Package,
+      tone: 'bg-teal-50 text-teal-600',
+    },
+    {
+      title: t('quickAddSupplier'),
+      hint: t('quickAddSupplierHint'),
+      href: '/dashboard/suppliers?new=1',
+      icon: Building2,
+      tone: 'bg-orange-50 text-orange-600',
+    },
+  ];
 
   useEffect(() => {
     setOpen(false);
@@ -71,16 +73,14 @@ export function DesktopQuickBar() {
     >
       <div className="pointer-events-auto relative flex items-end gap-3">
         {open ? (
-          <div
-            className="absolute bottom-[4.25rem] left-1/2 w-72 -translate-x-1/2 origin-bottom animate-fade-in rounded-[24px] border border-emerald-100/80 bg-white/95 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-xl"
-          >
+          <div className="absolute bottom-[4.25rem] left-1/2 w-72 -translate-x-1/2 origin-bottom animate-fade-in rounded-[24px] border border-emerald-100/80 bg-white/95 p-2 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-xl">
             <div className="mb-1 flex items-center justify-between px-3 pb-1 pt-2">
-              <p className="text-xs font-bold text-slate-800">افزودن سریع</p>
+              <p className="text-xs font-bold text-slate-800">{t('quickAddTitle')}</p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 className="rounded-lg p-1 text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-                aria-label="بستن"
+                aria-label={t('close')}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -124,7 +124,7 @@ export function DesktopQuickBar() {
         <div className="flex items-center gap-2 rounded-full border border-emerald-200/70 bg-white/95 p-1.5 shadow-[0_14px_40px_rgba(16,185,129,0.22)] backdrop-blur-xl">
           <Link
             href="/dashboard"
-            title="داشبورد"
+            title={t('mobileNavDashboard')}
             className={cn(
               'inline-flex h-12 w-12 items-center justify-center rounded-full transition',
               onDashboard
@@ -137,7 +137,7 @@ export function DesktopQuickBar() {
 
           <button
             type="button"
-            title="افزودن"
+            title={t('quickAddTitle')}
             onClick={() => setOpen((v) => !v)}
             className={cn(
               'inline-flex h-12 w-12 items-center justify-center rounded-full transition',

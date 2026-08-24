@@ -4,18 +4,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BarChart3, LayoutDashboard, MoreHorizontal, Users, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUiStore } from '@/lib/i18n/store';
+import { useI18n, useUiStore } from '@/lib/i18n/store';
 
 const items = [
-  { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/journal', label: 'عملیات', icon: Wallet },
-  { href: '/dashboard/reports', label: 'گزارش', icon: BarChart3 },
-  { href: '/dashboard/customers', label: 'مشتریان', icon: Users },
+  { href: '/dashboard', labelKey: 'mobileNavDashboard' as const, icon: LayoutDashboard, exact: true },
+  { href: '/dashboard/journal', labelKey: 'mobileNavOperations' as const, icon: Wallet },
+  { href: '/dashboard/reports', labelKey: 'mobileNavReports' as const, icon: BarChart3 },
+  { href: '/dashboard/customers', labelKey: 'mobileNavCustomers' as const, icon: Users },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
   const setMobileNavOpen = useUiStore((s) => s.setMobileNavOpen);
+  const { t } = useI18n();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md lg:hidden">
@@ -42,7 +43,7 @@ export function MobileNav() {
               >
                 <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
               </span>
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -54,7 +55,7 @@ export function MobileNav() {
           <span className="flex h-8 w-8 items-center justify-center rounded-xl">
             <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.75} />
           </span>
-          بیشتر
+          {t('mobileNavMore')}
         </button>
       </div>
     </nav>

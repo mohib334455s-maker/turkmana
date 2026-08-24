@@ -1,8 +1,9 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Download, FileText, Layers, Truck } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { ArrowRight, Download, FileText, Layers, Plus, Trash2, Truck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ import {
 import { PageHeader } from '@/components/shared/page-header';
 import { BrandDocumentHeader, CompanyLogo } from '@/components/brand/company-logo';
 import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
+import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import type { ForeignArrivalRecord, GoodsArrivalRecord, PartyRecord } from '@/lib/demo-data';
 import { formatCurrency, formatNumber } from '@/lib/utils';
@@ -24,6 +26,10 @@ import { ExportButtons } from '@/components/shared/export-buttons';
 import { RelatedJournal } from '@/components/journal/related-journal';
 import { isContractOpenForExpenses } from '@/lib/permissions';
 import { downloadContractJson, exportContractDocument } from '@/lib/export';
+import { contractValue, paymentProgress } from '@/lib/contract-payments';
+import { notifyAdminChange } from '@/lib/activity-store';
+import { todayIso } from '@/lib/purchase-flow';
+import { useI18n } from '@/lib/i18n/store';
 
 const EMPTY: OpsRow[] = [];
 
@@ -42,8 +48,21 @@ export default function ContractDetailPage({
 }) {
   const { id } = use(params);
   const contractId = Number(id);
+  const searchParams = useSearchParams();
+  const { tx } = useI18n();
   const contract = useOpsStore((s) => s.contracts.find((c) => c.id === contractId));
   const updateContract = useOpsStore((s) => s.updateContract);
+  const addContractPayment = useOpsStore((s) => s.addContractPayment);
+  const removeContractPayment = useOpsStore((s) => s.removeContractPayment);
+  const payments = useOpsStore((s) =>
+    s.contractPayments.filter((p) => p.contractId === contractId)
+  );
+  const [payOpen, setPayOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('pay') === '1') setPayOpen(true);
+  }, [searchParams]);
+
   const contractParties = useOpsStore(
     (s) => ((s.lists.parties ?? EMPTY) as unknown as PartyRecord[]).filter((p) => p.contractId === contractId)
   );
@@ -75,6 +94,11 @@ export default function ContractDetailPage({
     return acc;
   }, {});
 
+  const progress = paymentProgress(
+    contractValue(contract.totalQty, contract.pricePerUnit),
+    contract.paidAmount || 0
+  );
+
   const exportPayload = {
     id: contract.id,
     number: contract.number,
@@ -92,6 +116,8 @@ export default function ContractDetailPage({
     waste: contract.waste,
     sellable: contract.sellable,
     transit: contract.transit,
+    paidAmount: progress.paidAmount,
+    contractValue: progress.contractVal,
     parties: contractParties.map((p) => ({
       number: p.number,
       location: p.location,
@@ -118,7 +144,7 @@ export default function ContractDetailPage({
             <Button
               size="sm"
               className="bg-emerald-500 text-white hover:bg-emerald-400"
-              onClick={() => exportContractDocument(exportPayload)}
+              onClick={() => void exportContractDocument(exportPayload)}
             >
               <FileText className="ml-2 h-4 w-4" />
               خروجی قرارداد
@@ -215,19 +241,105 @@ export default function ContractDetailPage({
           ['وضعیت', isContractOpenForExpenses(contract.status) ? 'فعال' : 'غیرفعال'],
           ['شرکت', contract.company === 'arya' ? 'آریا' : 'ترکمن'],
         ].map(([label, value]) => (
-          <Card key={String(label)} className="overflow-hidden rounded-2xl border-slate-200 shadow-none">
-            <CardContent className="relative p-4">
-              {label === 'شرکت' ? (
-                <div className="absolute end-3 top-3">
-                  <CompanyLogo company={contract.company} size="sm" />
-                </div>
-              ) : null}
+          <Card key={String(label)} className="rounded-2xl border-slate-200 shadow-none">
+            <CardContent className="p-4">
               <p className="text-xs text-slate-500">{label}</p>
               <p className="mt-1 text-lg font-bold">{value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Card className="overflow-hidden rounded-2xl border-teal-200 shadow-none">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b border-teal-100 bg-teal-50/50 pb-4">
+          <div>
+            <CardTitle className="text-base">{tx('پرداخت قرارداد', 'Contract payments')}</CardTitle>
+            <p className="mt-1 text-xs text-slate-500">
+              {tx(
+                'پیش‌پرداخت ۴۰٪، پرداخت جزئی یا کامل — درصد و باقی اینجا مشخص است.',
+                '40% advance, partial or full — percent and remaining shown here.'
+              )}
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setPayOpen(true)}>
+            <Plus className="ml-2 h-4 w-4" />
+            {tx('ثبت پرداخت', 'Record payment')}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4 p-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <p className="text-xs text-slate-500">{tx('ارزش قرارداد', 'Contract value')}</p>
+              <p className="mt-1 text-lg font-extrabold num">{formatCurrency(progress.contractVal)}</p>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+              <p className="text-xs text-emerald-800">{tx('پرداخت‌شده', 'Paid')}</p>
+              <p className="mt-1 text-lg font-extrabold num text-emerald-700">
+                {formatCurrency(progress.paidAmount)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+              <p className="text-xs text-amber-900">{tx('باقی پرداخت', 'Remaining')}</p>
+              <p className="mt-1 text-lg font-extrabold num text-amber-800">
+                {formatCurrency(progress.remaining)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-3">
+              <p className="text-xs text-sky-900">{tx('درصد پرداخت', 'Paid %')}</p>
+              <p className="mt-1 text-lg font-extrabold num text-sky-800">{progress.percent}%</p>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-sky-100">
+                <div
+                  className="h-full rounded-full bg-sky-500"
+                  style={{ width: `${Math.min(100, Math.max(0, progress.percent))}%` }}
+                />
+              </div>
+            </div>
+          </div>
+          {payments.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              {tx('هنوز پرداختی ثبت نشده.', 'No payments recorded yet.')}
+            </p>
+          ) : (
+            <div className="table-scroll">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{tx('تاریخ', 'Date')}</TableHead>
+                    <TableHead>{tx('مبلغ', 'Amount')}</TableHead>
+                    <TableHead>{tx('درصد', '%')}</TableHead>
+                    <TableHead>{tx('روش', 'Method')}</TableHead>
+                    <TableHead>{tx('یادداشت', 'Notes')}</TableHead>
+                    <TableHead className="text-end">{tx('حذف', 'Delete')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="num">{p.dateIso}</TableCell>
+                      <TableCell className="num font-semibold text-emerald-700">
+                        {formatCurrency(p.amount)}
+                      </TableCell>
+                      <TableCell className="num">{p.percent != null ? `${p.percent}%` : '—'}</TableCell>
+                      <TableCell>{p.method || '—'}</TableCell>
+                      <TableCell>{p.notes || '—'}</TableCell>
+                      <TableCell className="text-end">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-rose-600"
+                          onClick={() => removeContractPayment(p.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -412,6 +524,36 @@ export default function ContractDetailPage({
       </div>
 
       <RelatedJournal filter={{ contractId: contract.id }} />
+
+      <CompactFormDialog
+        open={payOpen}
+        onClose={() => setPayOpen(false)}
+        title={tx('ثبت پرداخت قرارداد', 'Record contract payment')}
+        size="lg"
+        fields={[
+          { key: 'date', label: tx('تاریخ', 'Date'), type: 'date', required: true },
+          { key: 'percent', label: tx('درصد (مثلاً ۴۰)', 'Percent (e.g. 40)'), type: 'number' },
+          { key: 'amount', label: tx('مبلغ', 'Amount'), type: 'number' },
+          {
+            key: 'method',
+            label: tx('روش پرداخت', 'Method'),
+            placeholder: tx('صرافی / بانک / نقد', 'Exchange / bank / cash'),
+          },
+          { key: 'notes', label: tx('یادداشت', 'Notes') },
+        ]}
+        initial={{ date: todayIso(), percent: '', amount: '', method: '' }}
+        submitLabel={tx('ثبت', 'Save')}
+        onSubmit={(v) => {
+          addContractPayment({
+            contractId: contract.id,
+            dateIso: v.date || todayIso(),
+            percent: v.percent ? Number(v.percent) : undefined,
+            amount: v.amount ? Number(v.amount) : undefined,
+            method: v.method || '',
+            notes: v.notes || '',
+          });
+        }}
+      />
 
       <p className="text-xs text-slate-500">
         زنجیره: Contract → Party → Shipment → Warehouse

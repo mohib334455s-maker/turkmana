@@ -99,9 +99,6 @@ const exactRoutes: Record<string, RouteModuleMeta> = {
   '/dashboard/finance/expenses': { navKey: 'finance', icon: Receipt },
   '/dashboard/sales/resales': { navKey: 'sales', icon: TrendingUp },
 
-  '/dashboard/exchange/currencies': { navKey: 'exchange', icon: Coins },
-  '/dashboard/exchange/rates': { navKey: 'exchange', icon: TrendingUp },
-
   '/dashboard/hr/employees': { navKey: 'hr', icon: Users },
   '/dashboard/hr/payroll': { navKey: 'hr', icon: Wallet },
   '/dashboard/hr/attendance': { navKey: 'hr', icon: Clock },

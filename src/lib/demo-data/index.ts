@@ -99,6 +99,8 @@ export type ContractRecord = {
   location: string;
   company: CompanyKey;
   pricePerUnit: number;
+  /** Sum of recorded payments toward this contract */
+  paidAmount?: number;
   status: string;
   wagons?: number;
   notes?: string;
@@ -248,6 +250,10 @@ export type ExchangeHouse = {
   /** Default exchanger; joint/treasury appear in separate summary rows */
   kind?: ExchangeAccountKind;
   location?: string;
+  phone?: string;
+  whatsapp?: string;
+  contactPerson?: string;
+  address?: string;
   notes?: string;
 };
 

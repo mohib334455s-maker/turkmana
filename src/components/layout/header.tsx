@@ -11,17 +11,25 @@ import {
 } from 'lucide-react';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
-import { dualDateLabel } from '@/lib/date-utils';
+import {
+  formatPreferredDate,
+  formatSecondaryDate,
+} from '@/lib/date-utils';
+import { unreadActivityCount, useActivityStore } from '@/lib/activity-store';
 import { cn } from '@/lib/utils';
 
 const iconBtn =
   'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white text-slate-500 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700';
 
 export function Header() {
-  const { t, locale } = useI18n();
+  const { t, locale, tx } = useI18n();
   const toggleLocale = useUiStore((s) => s.toggleLocale);
   const toggleMobileNav = useUiStore((s) => s.toggleMobileNav);
-  const dates = dualDateLabel();
+  const calendarType = useUiStore((s) => s.calendarType);
+  const activityItems = useActivityStore((s) => s.items);
+  const unread = unreadActivityCount(activityItems);
+  const primary = formatPreferredDate(new Date(), calendarType);
+  const secondary = formatSecondaryDate(new Date(), calendarType);
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-100 bg-white/90 backdrop-blur-xl">
@@ -30,7 +38,7 @@ export function Header() {
           type="button"
           onClick={toggleMobileNav}
           className={cn(iconBtn, 'lg:hidden')}
-          aria-label="باز کردن منو"
+          aria-label={tx('باز کردن منو', 'Open menu')}
         >
           <Menu className="h-[18px] w-[18px]" strokeWidth={1.75} />
         </button>
@@ -50,12 +58,19 @@ export function Header() {
         </div>
 
         <div className="ms-auto flex min-w-0 items-center gap-2">
-          <div className="hidden items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 lg:flex">
+          <div
+            className="hidden items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 lg:flex"
+            title={
+              calendarType === 'jalali'
+                ? t('calendarHintJalali')
+                : t('calendarHintGregorian')
+            }
+          >
             <CalendarDays className="h-3.5 w-3.5 text-teal-600" strokeWidth={1.75} />
-            <span className="num text-xs font-semibold text-slate-800">{dates.jalali}</span>
+            <span className="num text-xs font-semibold text-slate-800">{primary}</span>
             <span className="text-slate-300">|</span>
             <span className="num text-xs font-medium text-slate-500" dir="ltr">
-              {dates.gregorian}
+              {secondary}
             </span>
           </div>
 
@@ -79,16 +94,19 @@ export function Header() {
             title={t('notifications')}
           >
             <Bell className="h-4 w-4" strokeWidth={1.75} />
-            <span className="absolute end-2 top-2 h-2 w-2 rounded-full bg-teal-500 ring-2 ring-white" />
+            {unread > 0 ? (
+              <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-white">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            ) : null}
           </Link>
 
           <div className="hidden items-center gap-2.5 rounded-2xl border border-slate-200 bg-white py-1 ps-1 pe-3 sm:flex">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 text-sm font-bold text-white">
-              {locale === 'fa' ? 'م' : 'A'}
+              {locale === 'fa' ? 'ا' : 'SA'}
             </div>
             <div className="hidden leading-tight md:block">
               <p className="text-sm font-semibold text-slate-800">{t('systemManager')}</p>
-              <p className="text-[11px] text-slate-400">{t('admin')}</p>
             </div>
             <ChevronDown className="hidden h-4 w-4 text-slate-400 lg:block" />
           </div>

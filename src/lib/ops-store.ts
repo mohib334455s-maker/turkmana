@@ -34,6 +34,14 @@ import {
   gregorianFromIso,
   parseIsoDate,
 } from '@/lib/date-utils';
+import type { CashDrawerSource, ExchangeTxn, ExchangeTxnKind } from '@/lib/exchange-ledger';
+import {
+  formatTxnDates,
+  nextRemittanceNo,
+  nextTxnNumber,
+} from '@/lib/exchange-ledger';
+import type { ContractPayment } from '@/lib/contract-payments';
+import { amountFromPercent, contractValue } from '@/lib/contract-payments';
 
 export type OpsRow = Record<string, unknown> & {
   id: number;
@@ -117,15 +125,50 @@ type OpsState = {
   storageCashEntries: StorageCashEntry[];
   storageGoodsMoves: StorageGoodsMove[];
   wagonRentStays: WagonRentStay[];
+  exchangeTxns: ExchangeTxn[];
+  contractPayments: ContractPayment[];
   addContract: (input: Omit<ContractRecord, 'id'>) => ContractRecord;
   updateContract: (id: number, patch: Partial<ContractRecord>) => void;
   removeContract: (id: number) => void;
+  addContractPayment: (input: {
+    contractId: number;
+    dateIso: string;
+    amount?: number;
+    percent?: number;
+    method?: string;
+    notes?: string;
+  }) => ContractPayment | null;
+  removeContractPayment: (id: number) => void;
   setCustomers: (rows: CustomerRecord[]) => void;
   setSuppliers: (rows: SupplierRecord[]) => void;
   setRepresentatives: (rows: RepresentativeRecord[]) => void;
   getList: (key: string) => OpsRow[];
   setList: (key: string, rows: OpsRow[]) => void;
   addToList: (key: string, row: Omit<OpsRow, 'id'> & { id?: number }) => OpsRow;
+  updateInList: (key: string, id: number, patch: Record<string, unknown>) => void;
+  removeFromList: (key: string, id: number) => void;
+  addExchangeTxn: (input: {
+    houseId: number;
+    dateIso: string;
+    kind: ExchangeTxnKind;
+    received?: number;
+    paid?: number;
+    remittanceNo?: string;
+    details?: string;
+    counterparty?: string;
+    currency?: string;
+    drawerSource?: CashDrawerSource;
+    drawerSourceHouseId?: number;
+    drawerSourceLabel?: string;
+    purchaseRef?: string;
+    rate?: number;
+    commission?: number;
+    principalAmount?: number;
+    convertedAmount?: number;
+    company: CompanyKey;
+    notes?: string;
+  }) => ExchangeTxn | null;
+  getExchangeTxns: (houseId: number) => ExchangeTxn[];
   getCrud: (key: string) => CrudRow[] | undefined;
   setCrud: (key: string, rows: CrudRow[]) => void;
   addPurchaseOrder: (input: PurchaseOrderInput) => PurchaseOrder;
@@ -313,6 +356,15 @@ function appendCustomerLedger(
   return { ...ledgers, [customerId]: [...prev, next] };
 }
 
+function txnKindFallback(kind: ExchangeTxnKind) {
+  const map: Record<ExchangeTxnKind, string> = {
+    remittance_in: 'حواله ورودی',
+    remittance_out: 'حواله خروجی',
+    cash_withdrawal: 'برداشت نقدی',
+  };
+  return map[kind];
+}
+
 export const useOpsStore = create<OpsState>()(
   persist(
     (set, get) => ({
@@ -335,8 +387,14 @@ export const useOpsStore = create<OpsState>()(
       storageCashEntries: [],
       storageGoodsMoves: [],
       wagonRentStays: [],
+      exchangeTxns: [],
+      contractPayments: [],
       addContract: (input) => {
-        const row: ContractRecord = { ...input, id: nextId(get().contracts) };
+        const row: ContractRecord = {
+          ...input,
+          id: nextId(get().contracts),
+          paidAmount: Number(input.paidAmount || 0),
+        };
         set({ contracts: [row, ...get().contracts] });
         return row;
       },
@@ -345,7 +403,57 @@ export const useOpsStore = create<OpsState>()(
           contracts: get().contracts.map((c) => (c.id === id ? { ...c, ...patch } : c)),
         }),
       removeContract: (id) =>
-        set({ contracts: get().contracts.filter((c) => c.id !== id) }),
+        set({
+          contracts: get().contracts.filter((c) => c.id !== id),
+          contractPayments: get().contractPayments.filter((p) => p.contractId !== id),
+        }),
+      addContractPayment: (input) => {
+        const contract = get().contracts.find((c) => c.id === input.contractId);
+        if (!contract) return null;
+        const value = contractValue(contract.totalQty, contract.pricePerUnit);
+        let amount = Number(input.amount || 0);
+        const percent = Number(input.percent || 0);
+        if ((!amount || amount <= 0) && percent > 0) {
+          amount = amountFromPercent(value, percent);
+        }
+        if (!amount || amount <= 0) return null;
+        const payment: ContractPayment = {
+          id: nextId(get().contractPayments),
+          contractId: contract.id,
+          contractNumber: contract.number,
+          dateIso: input.dateIso,
+          amount,
+          percent: percent || (value > 0 ? Math.round((amount / value) * 1000) / 10 : undefined),
+          method: input.method || '',
+          notes: input.notes || '',
+          company: contract.company,
+        };
+        const contractPayments = [payment, ...get().contractPayments];
+        const paidAmount = contractPayments
+          .filter((p) => p.contractId === contract.id)
+          .reduce((s, p) => s + p.amount, 0);
+        set({
+          contractPayments,
+          contracts: get().contracts.map((c) =>
+            c.id === contract.id ? { ...c, paidAmount } : c
+          ),
+        });
+        return payment;
+      },
+      removeContractPayment: (id) => {
+        const target = get().contractPayments.find((p) => p.id === id);
+        if (!target) return;
+        const contractPayments = get().contractPayments.filter((p) => p.id !== id);
+        const paidAmount = contractPayments
+          .filter((p) => p.contractId === target.contractId)
+          .reduce((s, p) => s + p.amount, 0);
+        set({
+          contractPayments,
+          contracts: get().contracts.map((c) =>
+            c.id === target.contractId ? { ...c, paidAmount } : c
+          ),
+        });
+      },
       setCustomers: (customers) => set({ customers }),
       setSuppliers: (suppliers) => set({ suppliers }),
       setRepresentatives: (representatives) => set({ representatives }),
@@ -357,6 +465,121 @@ export const useOpsStore = create<OpsState>()(
         const rows = [next, ...prev];
         set({ lists: { ...get().lists, [key]: rows } });
         return next;
+      },
+      updateInList: (key, id, patch) => {
+        const prev = get().lists[key] ?? [];
+        set({
+          lists: {
+            ...get().lists,
+            [key]: prev.map((r) => (Number(r.id) === id ? { ...r, ...patch } : r)),
+          },
+        });
+      },
+      removeFromList: (key, id) => {
+        const prev = get().lists[key] ?? [];
+        const nextLists = {
+          ...get().lists,
+          [key]: prev.filter((r) => Number(r.id) !== id),
+        };
+        if (key === 'exchangeHouses') {
+          set({
+            lists: nextLists,
+            exchangeTxns: get().exchangeTxns.filter((t) => t.houseId !== id),
+          });
+          return;
+        }
+        set({ lists: nextLists });
+      },
+      getExchangeTxns: (houseId) =>
+        get()
+          .exchangeTxns.filter((t) => t.houseId === houseId)
+          .sort((a, b) => a.number - b.number),
+      addExchangeTxn: (input) => {
+        const lists = get().lists;
+        const houses = (lists.exchangeHouses ?? []) as OpsRow[];
+        const house = houses.find((h) => Number(h.id) === input.houseId);
+        if (!house) return null;
+
+        const allTxns = get().exchangeTxns;
+        const houseTxns = allTxns.filter((t) => t.houseId === input.houseId);
+        const received = Number(input.received || 0);
+        const paid = Number(input.paid || 0);
+        const prevBalance =
+          houseTxns.length > 0
+            ? houseTxns[houseTxns.length - 1].balance
+            : Number(house.balance) || 0;
+        const newBalance = prevBalance + received - paid;
+        const dates = formatTxnDates(input.dateIso);
+        const currency = input.currency || String(house.currency || 'USD');
+
+        const txn: ExchangeTxn = {
+          id: nextId(allTxns),
+          houseId: input.houseId,
+          number: nextTxnNumber(houseTxns),
+          dateIso: input.dateIso,
+          ...dates,
+          kind: input.kind,
+          remittanceNo: input.remittanceNo || nextRemittanceNo(allTxns),
+          details: input.details || '',
+          counterparty: input.counterparty || '',
+          currency,
+          received,
+          paid,
+          balance: newBalance,
+          drawerSource: input.drawerSource,
+          drawerSourceHouseId: input.drawerSourceHouseId,
+          drawerSourceLabel: input.drawerSourceLabel,
+          purchaseRef: input.purchaseRef,
+          rate: input.rate,
+          commission: input.commission,
+          principalAmount: input.principalAmount,
+          convertedAmount: input.convertedAmount,
+          aedEquivalent: input.convertedAmount,
+          company: input.company,
+          notes: input.notes,
+        };
+
+        let nextHouses = houses.map((h) => {
+          const id = Number(h.id);
+          if (id === input.houseId) {
+            return {
+              ...h,
+              balance: newBalance,
+              totalIn: Number(h.totalIn || 0) + received,
+              totalOut: Number(h.totalOut || 0) + paid,
+            };
+          }
+          if (
+            input.drawerSourceHouseId &&
+            id === input.drawerSourceHouseId &&
+            paid > 0
+          ) {
+            const srcBal = Number(h.balance || 0) - paid;
+            return {
+              ...h,
+              balance: srcBal,
+              totalOut: Number(h.totalOut || 0) + paid,
+            };
+          }
+          return h;
+        });
+
+        const journal = makeJournalRow(lists, {
+          dateIso: input.dateIso,
+          giver: paid > 0 ? String(house.name) : input.counterparty || '',
+          receiver: received > 0 ? String(house.name) : input.counterparty || '',
+          details: `[صرافی] ${txn.details || txnKindFallback(input.kind)} · ${txn.remittanceNo}`,
+          amount: received || paid,
+          opType: 'exchange',
+          company: input.company,
+          links: { exchangeId: input.houseId, exchangeTxnId: txn.id },
+        });
+
+        set({
+          exchangeTxns: [...allTxns, txn],
+          lists: { ...lists, exchangeHouses: nextHouses, journal: [journal, ...(lists.journal ?? [])] },
+        });
+        return txn;
       },
       getCrud: (key) => get().crud[key],
       setCrud: (key, rows) => set({ crud: { ...get().crud, [key]: rows } }),
@@ -1069,7 +1292,12 @@ export const useOpsStore = create<OpsState>()(
           storageCashEntries: p.storageCashEntries ?? [],
           storageGoodsMoves: p.storageGoodsMoves ?? [],
           wagonRentStays: p.wagonRentStays ?? [],
-          contracts: p.contracts ?? [],
+          exchangeTxns: p.exchangeTxns ?? [],
+          contractPayments: p.contractPayments ?? [],
+          contracts: (p.contracts ?? []).map((c) => ({
+            ...c,
+            paidAmount: Number(c.paidAmount || 0),
+          })),
           customers: p.customers ?? [],
           suppliers: p.suppliers ?? [],
           representatives: p.representatives ?? [],
@@ -1100,6 +1328,7 @@ export function emptyContract(company: CompanyKey = 'arya'): Omit<ContractRecord
     location: '',
     company,
     pricePerUnit: 0,
+    paidAmount: 0,
     status: 'active',
     wagons: 0,
     notes: '',

@@ -187,11 +187,7 @@ export const navModules: NavModule[] = [
     accent: 'text-lime-700',
     soft: 'from-lime-500/15 to-lime-500/5',
     ring: 'ring-lime-200/70',
-    children: [
-      { key: 'exchangeHouses', href: '/dashboard/exchange' },
-      { key: 'currencies', href: '/dashboard/exchange/currencies' },
-      { key: 'rates', href: '/dashboard/exchange/rates' },
-    ],
+    children: [{ key: 'exchangeHouses', href: '/dashboard/exchange' }],
   },
   {
     key: 'hr',

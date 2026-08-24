@@ -48,10 +48,26 @@ export default function SupplierLedgerPage({
   const { t } = useI18n();
   const { company } = useCompanyStore();
   const catalog = useProductCatalog();
-  const supplier = useOpsStore((store) => store.suppliers.find((row) => row.id === supplierId));
-  const orders = useOpsStore((s) => s.purchaseOrders.filter((o) => o.supplierId === supplierId));
-  const purchases = useOpsStore((s) => s.companyPurchases.filter((p) => p.supplierId === supplierId));
-  const invoices = useOpsStore((s) => s.purchaseInvoices.filter((i) => i.supplierId === supplierId));
+  const suppliersAll = useOpsStore((s) => s.suppliers);
+  const purchaseOrdersAll = useOpsStore((s) => s.purchaseOrders);
+  const companyPurchasesAll = useOpsStore((s) => s.companyPurchases);
+  const purchaseInvoicesAll = useOpsStore((s) => s.purchaseInvoices);
+  const supplier = useMemo(
+    () => suppliersAll.find((row) => row.id === supplierId),
+    [suppliersAll, supplierId]
+  );
+  const orders = useMemo(
+    () => purchaseOrdersAll.filter((o) => o.supplierId === supplierId),
+    [purchaseOrdersAll, supplierId]
+  );
+  const purchases = useMemo(
+    () => companyPurchasesAll.filter((p) => p.supplierId === supplierId),
+    [companyPurchasesAll, supplierId]
+  );
+  const invoices = useMemo(
+    () => purchaseInvoicesAll.filter((i) => i.supplierId === supplierId),
+    [purchaseInvoicesAll, supplierId]
+  );
 
   const goods = useMemo(
     () => supplierGoodsStats(supplierId, catalog, purchases, invoices),

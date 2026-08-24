@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Boxes, Wallet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,10 +19,26 @@ export default function StorageChoicePage({
   const { id } = use(params);
   const warehouseId = Number(id);
   const { tx } = useI18n();
-  const warehouse = useOpsStore((s) => s.warehouseEntities.find((w) => w.id === warehouseId));
-  const lots = useOpsStore((s) => s.stockLots.filter((l) => l.warehouseId === warehouseId));
-  const moves = useOpsStore((s) => s.storageGoodsMoves.filter((m) => m.warehouseId === warehouseId));
-  const cash = useOpsStore((s) => s.storageCashEntries.filter((e) => e.warehouseId === warehouseId));
+  const warehouseEntities = useOpsStore((s) => s.warehouseEntities);
+  const stockLotsAll = useOpsStore((s) => s.stockLots);
+  const storageGoodsMovesAll = useOpsStore((s) => s.storageGoodsMoves);
+  const storageCashEntriesAll = useOpsStore((s) => s.storageCashEntries);
+  const warehouse = useMemo(
+    () => warehouseEntities.find((w) => w.id === warehouseId),
+    [warehouseEntities, warehouseId]
+  );
+  const lots = useMemo(
+    () => stockLotsAll.filter((l) => l.warehouseId === warehouseId),
+    [stockLotsAll, warehouseId]
+  );
+  const moves = useMemo(
+    () => storageGoodsMovesAll.filter((m) => m.warehouseId === warehouseId),
+    [storageGoodsMovesAll, warehouseId]
+  );
+  const cash = useMemo(
+    () => storageCashEntriesAll.filter((e) => e.warehouseId === warehouseId),
+    [storageCashEntriesAll, warehouseId]
+  );
 
   if (!warehouse) {
     return (

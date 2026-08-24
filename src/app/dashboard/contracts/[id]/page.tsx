@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ArrowRight, Download, FileText, Layers, Plus, Trash2, Truck } from 'lucide-react';
@@ -50,30 +50,46 @@ export default function ContractDetailPage({
   const contractId = Number(id);
   const searchParams = useSearchParams();
   const { tx } = useI18n();
-  const contract = useOpsStore((s) => s.contracts.find((c) => c.id === contractId));
+  const contracts = useOpsStore((s) => s.contracts);
+  const contractPaymentsAll = useOpsStore((s) => s.contractPayments);
+  const partiesAll = useOpsStore(
+    (s) => (s.lists.parties ?? EMPTY) as unknown as PartyRecord[]
+  );
+  const foreignArrivalsAll = useOpsStore(
+    (s) => (s.lists.foreignArrivals ?? EMPTY) as unknown as ForeignArrivalRecord[]
+  );
+  const goodsArrivalsAll = useOpsStore(
+    (s) => (s.lists.goodsArrivals ?? EMPTY) as unknown as GoodsArrivalRecord[]
+  );
   const updateContract = useOpsStore((s) => s.updateContract);
   const addContractPayment = useOpsStore((s) => s.addContractPayment);
   const removeContractPayment = useOpsStore((s) => s.removeContractPayment);
-  const payments = useOpsStore((s) =>
-    s.contractPayments.filter((p) => p.contractId === contractId)
-  );
   const [payOpen, setPayOpen] = useState(false);
+
+  const contract = useMemo(
+    () => contracts.find((c) => c.id === contractId),
+    [contracts, contractId]
+  );
+  const payments = useMemo(
+    () => contractPaymentsAll.filter((p) => p.contractId === contractId),
+    [contractPaymentsAll, contractId]
+  );
+  const contractParties = useMemo(
+    () => partiesAll.filter((p) => p.contractId === contractId),
+    [partiesAll, contractId]
+  );
+  const arrivals = useMemo(
+    () => foreignArrivalsAll.filter((a) => a.contractNumber === contract?.number),
+    [foreignArrivalsAll, contract?.number]
+  );
+  const goods = useMemo(
+    () => goodsArrivalsAll.filter((g) => g.contractId === contractId),
+    [goodsArrivalsAll, contractId]
+  );
 
   useEffect(() => {
     if (searchParams.get('pay') === '1') setPayOpen(true);
   }, [searchParams]);
-
-  const contractParties = useOpsStore(
-    (s) => ((s.lists.parties ?? EMPTY) as unknown as PartyRecord[]).filter((p) => p.contractId === contractId)
-  );
-  const arrivals = useOpsStore((s) =>
-    ((s.lists.foreignArrivals ?? EMPTY) as unknown as ForeignArrivalRecord[]).filter(
-      (a) => a.contractNumber === contract?.number
-    )
-  );
-  const goods = useOpsStore((s) =>
-    ((s.lists.goodsArrivals ?? EMPTY) as unknown as GoodsArrivalRecord[]).filter((g) => g.contractId === contractId)
-  );
 
   if (!contract) {
     return (

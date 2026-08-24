@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Train } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,9 +37,21 @@ export default function StorageCashPage({
   const { id } = use(params);
   const warehouseId = Number(id);
   const { tx } = useI18n();
-  const warehouse = useOpsStore((s) => s.warehouseEntities.find((w) => w.id === warehouseId));
-  const entries = useOpsStore((s) => s.storageCashEntries.filter((e) => e.warehouseId === warehouseId));
-  const stays = useOpsStore((s) => s.wagonRentStays.filter((s) => s.warehouseId === warehouseId));
+  const warehouseEntities = useOpsStore((s) => s.warehouseEntities);
+  const storageCashEntriesAll = useOpsStore((s) => s.storageCashEntries);
+  const wagonRentStaysAll = useOpsStore((s) => s.wagonRentStays);
+  const warehouse = useMemo(
+    () => warehouseEntities.find((w) => w.id === warehouseId),
+    [warehouseEntities, warehouseId]
+  );
+  const entries = useMemo(
+    () => storageCashEntriesAll.filter((e) => e.warehouseId === warehouseId),
+    [storageCashEntriesAll, warehouseId]
+  );
+  const stays = useMemo(
+    () => wagonRentStaysAll.filter((s) => s.warehouseId === warehouseId),
+    [wagonRentStaysAll, warehouseId]
+  );
   const addStorageCashEntry = useOpsStore((s) => s.addStorageCashEntry);
   const addWagonRentStay = useOpsStore((s) => s.addWagonRentStay);
   const settleWagonRent = useOpsStore((s) => s.settleWagonRent);

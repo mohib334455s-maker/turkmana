@@ -41,9 +41,21 @@ export default function StorageGoodsPage({
   const warehouseId = Number(id);
   const { t, tx } = useI18n();
   const catalog = useProductCatalog();
-  const warehouse = useOpsStore((s) => s.warehouseEntities.find((w) => w.id === warehouseId));
-  const lots = useOpsStore((s) => s.stockLots.filter((l) => l.warehouseId === warehouseId));
-  const moves = useOpsStore((s) => s.storageGoodsMoves.filter((m) => m.warehouseId === warehouseId));
+  const warehouseEntities = useOpsStore((s) => s.warehouseEntities);
+  const stockLotsAll = useOpsStore((s) => s.stockLots);
+  const storageGoodsMovesAll = useOpsStore((s) => s.storageGoodsMoves);
+  const warehouse = useMemo(
+    () => warehouseEntities.find((w) => w.id === warehouseId),
+    [warehouseEntities, warehouseId]
+  );
+  const lots = useMemo(
+    () => stockLotsAll.filter((l) => l.warehouseId === warehouseId),
+    [stockLotsAll, warehouseId]
+  );
+  const moves = useMemo(
+    () => storageGoodsMovesAll.filter((m) => m.warehouseId === warehouseId),
+    [storageGoodsMovesAll, warehouseId]
+  );
   const sellFromLot = useOpsStore((s) => s.sellFromLot);
   const addStorageGoodsMove = useOpsStore((s) => s.addStorageGoodsMove);
   const receiveToWarehouse = useOpsStore((s) => s.receiveToWarehouse);

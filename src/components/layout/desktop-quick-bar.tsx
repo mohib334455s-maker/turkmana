@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Building2,
+  BookOpen,
   LayoutDashboard,
   Package,
   Plus,
@@ -17,10 +18,12 @@ import { useI18n } from '@/lib/i18n/store';
 export function DesktopQuickBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, tx } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const onDashboard = pathname === '/dashboard' || pathname === '/dashboard/';
+  const onJournal =
+    pathname === '/dashboard/journal' || pathname.startsWith('/dashboard/journal/');
 
   const addItems = [
     {
@@ -133,6 +136,19 @@ export function DesktopQuickBar() {
             )}
           >
             <LayoutDashboard className="h-5 w-5" strokeWidth={1.8} />
+          </Link>
+
+          <Link
+            href="/dashboard/journal"
+            title={tx('روزنامچه', 'Day book')}
+            className={cn(
+              'inline-flex h-12 w-12 items-center justify-center rounded-full transition',
+              onJournal
+                ? 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-300/50'
+                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+            )}
+          >
+            <BookOpen className="h-5 w-5" strokeWidth={1.8} />
           </Link>
 
           <button

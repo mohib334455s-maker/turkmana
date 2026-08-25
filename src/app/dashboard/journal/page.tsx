@@ -1,10 +1,17 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search,
+  CalendarDays,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -34,14 +41,17 @@ import {
   formatJournalValue,
   JOURNAL_MARK_META,
   JOURNAL_OP_LABELS,
+  lineOrderBetween,
   nextJournalBookNumber,
+  nextLineOrder,
+  sortDayRows,
   type JournalLinks,
 } from '@/lib/journal';
+import { CHART_ACCOUNT_CATALOG, CHART_KIND_LABELS } from '@/lib/chart-accounts';
 import {
   formatGregorian,
   formatJalali,
   formatJalaliWeekday,
-  gregorianFromIso,
   parseIsoDate,
 } from '@/lib/date-utils';
 import { todayIso } from '@/lib/purchase-flow';
@@ -62,6 +72,12 @@ function displayValue(row: JournalEntry) {
   return qty || formatCurrency(row.amount, row.currency || 'USD');
 }
 
+function shiftIso(iso: string, days: number) {
+  const d = parseIsoDate(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function JournalPage() {
   const { t, tx } = useI18n();
   const { company } = useCompanyStore();
@@ -76,28 +92,72 @@ export default function JournalPage() {
   const warehouses = useOpsStore((s) => s.warehouseEntities);
   const parties = useOpsStore((s) => s.lists.parties ?? EMPTY);
   const exchanges = useOpsStore((s) => s.lists.exchangeHouses ?? EMPTY);
-  const [createOpen, setCreateOpen] = useState(false);
+  const banks = useOpsStore((s) => (s.lists.banks ?? EMPTY) as OpsRow[]);
+  const ledger = useOpsStore((s) => (s.lists.ledgerAccounts ?? EMPTY) as OpsRow[]);
+
+  const [dayIso, setDayIso] = useState(todayIso());
   const [q, setQ] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [insertAfterId, setInsertAfterId] = useState<number | null>(null);
 
-  const rows = items.filter((e) => matchesCompany(e.company, company));
-  const filtered = rows.filter((r) => {
-    if (!q.trim()) return true;
-    const hay = `${r.number} ${r.giver} ${r.receiver} ${r.details} ${r.dateJalali}`.toLowerCase();
-    return hay.includes(q.trim().toLowerCase());
-  });
+  const dayDate = parseIsoDate(dayIso);
+  const dayJalali = formatJalali(dayDate);
+  const dayGregorian = formatGregorian(dayDate);
+  const dayWeekday = formatJalaliWeekday(dayDate);
 
-  const todayJalali = formatJalali();
-  const todayRows = rows.filter((r) => r.dateJalali === todayJalali);
-  const header = todayRows[0] ?? rows[0];
-  const receipts = rows.filter((r) => r.opType === 'receipt').reduce((s, r) => s + r.amount, 0);
-  const payments = rows
+  const companyRows = useMemo(
+    () => items.filter((e) => matchesCompany(e.company, company)),
+    [items, company]
+  );
+
+  const dayRows = useMemo(() => {
+    const matched = companyRows.filter((r) => {
+      if (r.dateIso) return r.dateIso === dayIso;
+      return r.dateJalali === dayJalali;
+    });
+    return sortDayRows(matched);
+  }, [companyRows, dayIso, dayJalali]);
+
+  const filtered = useMemo(() => {
+    if (!q.trim()) return dayRows;
+    const needle = q.trim().toLowerCase();
+    return dayRows.filter((r) =>
+      `${r.number} ${r.giver} ${r.receiver} ${r.details} ${r.opType}`
+        .toLowerCase()
+        .includes(needle)
+    );
+  }, [dayRows, q]);
+
+  const receipts = dayRows
+    .filter((r) => r.opType === 'receipt')
+    .reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  const payments = dayRows
     .filter((r) => r.opType === 'payment' || r.opType === 'expense')
-    .reduce((s, r) => s + r.amount, 0);
+    .reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
   const companyTitle =
     company === 'turkmen'
-      ? tx('روزنامچه دفتر شرکت ترکمن', 'Turkmen office journal')
-      : tx('روزنامچه دفتر شرکت آریا', 'Arya office journal');
+      ? tx('روزنامچه ترکمن پطرولیم', 'Turkmen Petroleum day book')
+      : tx('روزنامچه آزیا آریا لمتید', 'Azya Aria LTD day book');
+
+  const chartOptions = useMemo(() => {
+    const fromStore = ledger
+      .filter((a) => matchesCompany(String(a.company), company))
+      .map((a) => ({
+        value: String(a.id),
+        label: `${a.code || ''} — ${a.name || a.id}`,
+      }));
+    if (fromStore.length) {
+      return [{ value: '', label: tx('بدون حساب دفتر کل', 'No ledger account') }, ...fromStore];
+    }
+    return [
+      { value: '', label: tx('بدون حساب دفتر کل', 'No ledger account') },
+      ...CHART_ACCOUNT_CATALOG.map((a) => ({
+        value: a.code,
+        label: `${a.code} — ${a.nameFa} (${CHART_KIND_LABELS[a.kind].fa})`,
+      })),
+    ];
+  }, [ledger, company, tx]);
 
   const linkOptions = useMemo(
     () => ({
@@ -111,7 +171,9 @@ export default function JournalPage() {
       ],
       contracts: [
         { value: '', label: tx('بدون قرارداد', 'No contract') },
-        ...contracts.map((c) => ({ value: String(c.id), label: `${c.number} — ${c.product}` })),
+        ...contracts
+          .filter((c) => matchesCompany(c.company, company))
+          .map((c) => ({ value: String(c.id), label: `${c.number} — ${c.product}` })),
       ],
       parties: [
         { value: '', label: tx('بدون پارتی', 'No party') },
@@ -122,52 +184,113 @@ export default function JournalPage() {
       ],
       warehouses: [
         { value: '', label: tx('بدون ذخیره', 'No storage') },
-        ...warehouses.map((w) => ({ value: String(w.id), label: w.name })),
+        ...warehouses
+          .filter((w) => matchesCompany(w.company, company))
+          .map((w) => ({ value: String(w.id), label: w.name })),
       ],
       exchanges: [
         { value: '', label: tx('بدون صراف', 'No exchange') },
-        ...exchanges.map((h) => ({
-          value: String(h.id),
-          label: String(h.name || h.id),
-        })),
+        ...exchanges
+          .filter((h) => matchesCompany(String(h.company), company))
+          .map((h) => ({
+            value: String(h.id),
+            label: String(h.name || h.id),
+          })),
       ],
+      banks: [
+        { value: '', label: tx('بدون بانک', 'No bank') },
+        ...banks
+          .filter((b) => matchesCompany(String(b.company), company))
+          .map((b) => ({
+            value: String(b.id),
+            label: String(b.name || b.bankName || b.id),
+          })),
+      ],
+      chart: chartOptions,
     }),
-    [customers, suppliers, contracts, parties, warehouses, exchanges, tx]
+    [
+      customers,
+      suppliers,
+      contracts,
+      parties,
+      warehouses,
+      exchanges,
+      banks,
+      chartOptions,
+      company,
+      tx,
+    ]
   );
 
-  const defaultBook = todayRows[0]?.number || nextJournalBookNumber(rows);
+  const defaultBook = nextJournalBookNumber(dayRows);
+
+  const openCreate = (afterId: number | null = null) => {
+    setInsertAfterId(afterId);
+    setCreateOpen(true);
+  };
+
+  const buildLinks = (v: Record<string, string>): JournalLinks => {
+    const links: JournalLinks = {};
+    if (Number(v.customerId)) links.customerId = Number(v.customerId);
+    if (Number(v.supplierId)) links.supplierId = Number(v.supplierId);
+    if (Number(v.contractId)) links.contractId = Number(v.contractId);
+    if (Number(v.partyId)) links.partyId = Number(v.partyId);
+    if (Number(v.warehouseId)) links.warehouseId = Number(v.warehouseId);
+    if (Number(v.exchangeId)) links.exchangeId = Number(v.exchangeId);
+    if (Number(v.bankAccountId)) links.bankAccountId = Number(v.bankAccountId);
+    if (v.cash === '1') links.cash = true;
+    if (v.ledgerAccountId) {
+      const n = Number(v.ledgerAccountId);
+      if (Number.isFinite(n) && n > 0) links.ledgerAccountId = n;
+      else {
+        const acc = CHART_ACCOUNT_CATALOG.find((a) => a.code === v.ledgerAccountId);
+        if (acc?.kind === 'partner') links.partnerAccountId = 1;
+        if (acc?.kind === 'misc_receivable') links.miscReceivableId = 1;
+        if (acc?.kind === 'asset') links.assetAccountId = 1;
+        if (acc?.kind === 'depreciation') links.depreciationAccountId = 1;
+      }
+    }
+    return links;
+  };
+
+  const autoNamesFromLinks = (v: Record<string, string>) => {
+    let giver = v.giver?.trim() || '';
+    let receiver = v.receiver?.trim() || '';
+    const cust = customers.find((c) => String(c.id) === v.customerId);
+    const sup = suppliers.find((s) => String(s.id) === v.supplierId);
+    if (v.opType === 'receipt' && cust && !giver) giver = cust.name;
+    if (v.opType === 'payment' && sup && !receiver) receiver = sup.name;
+    if (cust && !giver && !receiver) giver = cust.name;
+    if (sup && !receiver) receiver = sup.name;
+    return { giver, receiver };
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <PageHeader
         title={t('pageJournal')}
-        description={tx(
-          'دفتر روزانه — دهنده، گیرنده، تفصیلات، مبلغ یا مقدار (تن)، و تیک تأیید ه / ح / ن / ا. هر سند به حساب واقعی وصل می‌شود.',
-          'Daily book — giver, receiver, details, amount or quantity (tons), and approval ticks. Each line links to a real account.'
-        )}
+        description={t('pageJournalDesc')}
         actions={
           <>
             <ExportButtons
-              filename="journal"
-              title={t('pageJournal')}
+              filename={`journal-${dayIso}`}
+              title={`${t('pageJournal')} — ${dayJalali}`}
               columns={[
                 { key: 'line', label: 'شماره' },
-                { key: 'number', label: 'نمبر روزنامچه' },
-                { key: 'dateJalali', label: 'تاریخ شمسی' },
-                { key: 'dateGregorian', label: 'تاریخ میلادی' },
-                { key: 'weekday', label: 'روز' },
+                { key: 'number', label: 'نمبر' },
+                { key: 'dateJalali', label: 'شمسی' },
+                { key: 'dateGregorian', label: 'میلادی' },
                 { key: 'giver', label: 'دهنده' },
                 { key: 'receiver', label: 'گیرنده' },
                 { key: 'details', label: 'تفصیلات' },
                 { key: 'value', label: 'مبلغ / مقدار' },
-                { key: 'opType', label: 'نوع عملیات' },
+                { key: 'opType', label: 'نوع' },
               ]}
               rows={filtered.map((r, i) => ({
                 line: i + 1,
                 number: r.number,
                 dateJalali: r.dateJalali,
                 dateGregorian: r.dateGregorian,
-                weekday: r.weekday || '',
                 giver: r.giver,
                 receiver: r.receiver,
                 details: r.details,
@@ -176,53 +299,104 @@ export default function JournalPage() {
               }))}
             />
             <CompanySwitcher />
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="ml-2 h-4 w-4" />
-              {tx('ثبت جدید', 'New entry')}
+            <Button onClick={() => openCreate(null)}>
+              <Plus className="ms-2 h-4 w-4" />
+              {tx('سطر جدید', 'New line')}
             </Button>
           </>
         }
       />
 
-      <Card className="overflow-hidden border-teal-100">
-        <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="sm:col-span-2">
-            <p className="text-xs text-slate-500">{tx('عنوان دفتر', 'Book title')}</p>
-            <p className="mt-1 text-lg font-extrabold text-slate-900">{companyTitle}</p>
+      {/* Day picker — Shamsi + Gregorian */}
+      <Card className="overflow-hidden rounded-[24px] border-indigo-100 shadow-none">
+        <CardContent className="space-y-4 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium text-slate-500">{tx('عنوان دفتر', 'Book')}</p>
+              <p className="mt-1 text-lg font-extrabold text-slate-900">{companyTitle}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={() => setDayIso(shiftIso(dayIso, -1))}
+                title={tx('روز قبل', 'Previous day')}
+              >
+                <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setDayIso(todayIso())}
+              >
+                {tx('امروز', 'Today')}
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={() => setDayIso(shiftIso(dayIso, 1))}
+                title={tx('روز بعد', 'Next day')}
+              >
+                <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+              </Button>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-slate-500">{tx('نمبر', 'Serial')}</p>
-            <p className="mt-1 font-bold num">({header?.number || defaultBook})</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">{tx('تاریخ شمسی', 'Jalali')}</p>
-            <p className="mt-1 font-bold num">{header?.dateJalali || todayJalali}</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">{tx('تاریخ میلادی / روز', 'Gregorian / day')}</p>
-            <p className="mt-1 font-bold num" dir="ltr">
-              {header?.dateGregorian || formatGregorian()} · {header?.weekday || formatJalaliWeekday()}
-            </p>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2">
+              <Label className="inline-flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {tx('انتخاب تاریخ (میلادی)', 'Pick date (Gregorian)')}
+              </Label>
+              <Input
+                type="date"
+                dir="ltr"
+                className="mt-1.5"
+                value={dayIso}
+                onChange={(e) => setDayIso(e.target.value || todayIso())}
+              />
+            </div>
+            <div className="rounded-xl border border-teal-100 bg-teal-50/60 px-4 py-3">
+              <p className="text-[11px] font-medium text-teal-800">
+                {tx('تاریخ شمسی', 'Jalali')}
+              </p>
+              <p className="mt-1 text-lg font-extrabold num text-teal-950">{dayJalali}</p>
+              <p className="text-xs text-teal-700">{dayWeekday}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-[11px] font-medium text-slate-500">
+                {tx('تاریخ میلادی', 'Gregorian')}
+              </p>
+              <p className="mt-1 text-lg font-extrabold num text-slate-900" dir="ltr">
+                {dayGregorian}
+              </p>
+              <p className="text-xs text-slate-500">
+                {tx('تعداد سطر', 'Lines')}: <span className="num font-bold">{dayRows.length}</span>
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
+        <Card className="rounded-2xl border-emerald-100 shadow-none">
           <CardContent className="p-4">
-            <p className="text-xs text-slate-500">{tx('جمع دریافتی', 'Receipts')}</p>
+            <p className="text-xs text-slate-500">{tx('دریافتی همین روز', 'Day receipts')}</p>
             <p className="mt-1 text-xl font-bold num text-emerald-700">{formatCurrency(receipts)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-2xl border-rose-100 shadow-none">
           <CardContent className="p-4">
-            <p className="text-xs text-slate-500">{tx('جمع پرداختی', 'Payments')}</p>
-            <p className="mt-1 text-xl font-bold num text-red-600">{formatCurrency(payments)}</p>
+            <p className="text-xs text-slate-500">{tx('پرداختی همین روز', 'Day payments')}</p>
+            <p className="mt-1 text-xl font-bold num text-rose-600">{formatCurrency(payments)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-2xl border-slate-200 shadow-none">
           <CardContent className="p-4">
-            <p className="text-xs text-slate-500">{tx('بیلانس روزنامچه', 'Journal balance')}</p>
+            <p className="text-xs text-slate-500">{tx('بیلانس روز', 'Day balance')}</p>
             <p className="mt-1 text-xl font-bold num text-slate-900">
               {formatCurrency(receipts - payments)}
             </p>
@@ -230,84 +404,100 @@ export default function JournalPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="flex-col gap-3 space-y-0 pb-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base">{tx('دفتر روزنامچه', 'Journal book')}</CardTitle>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <Card className="overflow-hidden rounded-[22px] border-slate-200 shadow-none">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <p className="text-sm font-extrabold text-slate-900">
+            {tx('معاملات روز', 'Day transactions')} — {dayJalali}
+          </p>
+          <div className="relative w-full sm:w-56">
+            <Search className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
-              placeholder={tx('جستجو...', 'Search...')}
-              className="pr-9 h-9"
+              placeholder={tx('جستجو در همین روز…', 'Search this day…')}
+              className="h-9 pe-9"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
-        </CardHeader>
-        <CardContent className="px-0 pb-4 lg:pb-0">
-          <ResponsiveData
-            table={
-              <div className="table-scroll">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <BiLabel fa="شماره" en="No." />
+        </div>
+
+        <ResponsiveData
+          table={
+            <div className="table-scroll">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[6%]">
+                      <BiLabel fa="ش" en="#" />
+                    </TableHead>
+                    <TableHead>
+                      <BiLabel fa="دهنده" en="Giver" />
+                    </TableHead>
+                    <TableHead>
+                      <BiLabel fa="گیرنده" en="Receiver" />
+                    </TableHead>
+                    <TableHead>
+                      <BiLabel fa="تفصیلات" en="Details" />
+                    </TableHead>
+                    <TableHead>
+                      <BiLabel fa="مبلغ / مقدار" en="Amount" />
+                    </TableHead>
+                    {JOURNAL_MARK_META.map((m) => (
+                      <TableHead key={m.key} className="w-9 text-center">
+                        {m.fa}
                       </TableHead>
-                      <TableHead>
-                        <BiLabel fa="دهنده" en="Giver" />
-                      </TableHead>
-                      <TableHead>
-                        <BiLabel fa="گیرنده" en="Receiver" />
-                      </TableHead>
-                      <TableHead>
-                        <BiLabel fa="تفصیلات" en="Details" />
-                      </TableHead>
-                      <TableHead>
-                        <BiLabel fa="مبلغ / مقدار" en="Amount / qty" />
-                      </TableHead>
-                      {JOURNAL_MARK_META.map((m) => (
-                        <TableHead key={m.key} className="w-10 text-center">
-                          {m.fa}
-                        </TableHead>
-                      ))}
-                      <TableHead>
-                        <BiLabel fa="اتصال" en="Links" />
-                      </TableHead>
-                      <TableHead className="text-center">
-                        <BiLabel fa="عملیات" en="Actions" />
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableEmpty
-                        colSpan={10}
-                        message={tx('هنوز عملیات روزنامچه‌ای ثبت نشده است', 'No journal lines yet')}
-                      />
-                    ) : null}
-                    {filtered.map((row, i) => {
-                      const marks = { ...emptyMarks(), ...row.marks };
-                      return (
-                        <TableRow key={row.id}>
-                          <TableCell className="font-medium num">{i + 1}</TableCell>
-                          <TableCell>{row.giver || '—'}</TableCell>
-                          <TableCell>{row.receiver || '—'}</TableCell>
-                          <TableCell className="max-w-[280px] whitespace-normal text-sm">
-                            <p>{row.details}</p>
-                            <p className="mt-0.5 text-[11px] text-slate-400">
-                              {row.dateJalali} · {opFa(row.opType)}
-                            </p>
+                    ))}
+                    <TableHead>
+                      <BiLabel fa="اتصال" en="Links" />
+                    </TableHead>
+                    <TableHead className="text-center w-[14%]">
+                      <BiLabel fa="عملیات" en="Actions" />
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableEmpty
+                      colSpan={10}
+                      message={tx(
+                        'برای این روز سطر نیست — «سطر جدید» را بزنید',
+                        'No lines for this day — add a new line'
+                      )}
+                    />
+                  ) : null}
+                  {filtered.map((row, i) => {
+                    const marks = { ...emptyMarks(), ...row.marks };
+                    return (
+                      <TableRow key={row.id}>
+                        <TableCell className="num font-medium text-slate-500">{i + 1}</TableCell>
+                        <TableCell className="font-semibold">{row.giver || '—'}</TableCell>
+                        <TableCell>{row.receiver || '—'}</TableCell>
+                        <TableCell className="max-w-[260px] whitespace-normal text-sm">
+                          <p>{row.details}</p>
+                          <p className="mt-0.5 text-[11px] text-slate-400">
+                            {opFa(row.opType)}
+                            {row.number ? ` · #${row.number}` : ''}
+                          </p>
+                        </TableCell>
+                        <TableCell className="num font-semibold">{displayValue(row)}</TableCell>
+                        {JOURNAL_MARK_META.map((m) => (
+                          <TableCell key={m.key} className="text-center text-emerald-700">
+                            {marks[m.key] ? '✓' : ''}
                           </TableCell>
-                          <TableCell className="num font-semibold">{displayValue(row)}</TableCell>
-                          {JOURNAL_MARK_META.map((m) => (
-                            <TableCell key={m.key} className="text-center text-emerald-700">
-                              {marks[m.key] ? '✓' : ''}
-                            </TableCell>
-                          ))}
-                          <TableCell>
-                            <JournalLinkChips links={row.links} />
-                          </TableCell>
-                          <TableCell>
+                        ))}
+                        <TableCell>
+                          <JournalLinkChips links={row.links as JournalLinks} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap items-center justify-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-2 text-[11px]"
+                              title={tx('افزودن سطر بعد از این', 'Insert below')}
+                              onClick={() => openCreate(row.id)}
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
                             <RecordActions
                               title={tx('سند روزنامچه', 'Journal voucher')}
                               activity={{
@@ -320,7 +510,6 @@ export default function JournalPage() {
                               }}
                               row={{
                                 number: row.number,
-                                dateJalali: row.dateJalali,
                                 giver: row.giver,
                                 receiver: row.receiver,
                                 details: row.details,
@@ -329,7 +518,6 @@ export default function JournalPage() {
                               }}
                               fields={[
                                 { key: 'number', label: tx('نمبر', 'Serial') },
-                                { key: 'dateJalali', label: tx('تاریخ شمسی (دلخواه)', 'Jalali date') },
                                 { key: 'giver', label: tx('دهنده', 'Giver') },
                                 { key: 'receiver', label: tx('گیرنده', 'Receiver') },
                                 { key: 'details', label: tx('تفصیلات', 'Details'), multiline: true },
@@ -344,7 +532,6 @@ export default function JournalPage() {
                                     return {
                                       ...r,
                                       number: String(next.number ?? r.number),
-                                      dateJalali: String(next.dateJalali ?? r.dateJalali),
                                       giver: String(next.giver ?? r.giver),
                                       receiver: String(next.receiver ?? r.receiver),
                                       details: String(next.details ?? r.details),
@@ -361,120 +548,100 @@ export default function JournalPage() {
                                 )
                               }
                             />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            }
-            cards={
-              filtered.length === 0 ? (
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {filtered.length > 0 ? (
+                <div className="border-t border-dashed border-slate-200 px-4 py-3 text-center">
+                  <Button variant="outline" size="sm" onClick={() => openCreate(null)}>
+                    <Plus className="ms-2 h-4 w-4" />
+                    {tx('افزودن در انتهای روز', 'Add at end of day')}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          }
+          cards={
+            <div className="space-y-3 px-3 py-3">
+              {filtered.length === 0 ? (
                 <p className="py-10 text-center text-sm text-slate-500">
-                  {tx('هنوز عملیات روزنامچه‌ای ثبت نشده است', 'No journal lines yet')}
+                  {tx('برای این روز سطر نیست', 'No lines for this day')}
                 </p>
               ) : (
                 filtered.map((row, i) => (
                   <MobileRecordCard
                     key={row.id}
                     title={row.details || opFa(row.opType)}
-                    subtitle={`${tx('نمبر', 'No.')} ${i + 1} · ${row.dateJalali}`}
+                    subtitle={`${tx('سطر', 'Line')} ${i + 1}`}
                     badge={<Badge variant="info">{opFa(row.opType)}</Badge>}
                     metrics={[
-                      { label: tx('مبلغ / مقدار', 'Amount / qty'), value: displayValue(row) },
+                      { label: tx('مبلغ / مقدار', 'Amount'), value: displayValue(row) },
                       { label: tx('دهنده', 'Giver'), value: row.giver || '—' },
                       { label: tx('گیرنده', 'Receiver'), value: row.receiver || '—' },
                     ]}
                     extra={
                       <>
-                        <ExtraRow label={tx('تاریخ میلادی', 'Gregorian')} value={row.dateGregorian} />
                         <ExtraRow
                           label={tx('اتصال', 'Links')}
-                          value={<JournalLinkChips links={row.links} />}
+                          value={<JournalLinkChips links={row.links as JournalLinks} />}
                         />
                       </>
                     }
                     footer={
-                      <RecordActions
-                        layout="buttons"
-                        title={tx('سند روزنامچه', 'Journal voucher')}
-                        row={{
-                          number: row.number,
-                          dateJalali: row.dateJalali,
-                          giver: row.giver,
-                          receiver: row.receiver,
-                          details: row.details,
-                          amount: row.amount,
-                        }}
-                        fields={[
-                          { key: 'number', label: tx('نمبر', 'Serial') },
-                          { key: 'dateJalali', label: tx('تاریخ', 'Date') },
-                          { key: 'giver', label: tx('دهنده', 'Giver') },
-                          { key: 'receiver', label: tx('گیرنده', 'Receiver') },
-                          { key: 'details', label: tx('تفصیلات', 'Details'), multiline: true },
-                          { key: 'amount', label: tx('مبلغ', 'Amount') },
-                        ]}
-                        onSave={(next) => {
-                          setList(
-                            'journal',
-                            items.map((r) => {
-                              if (r.id !== row.id) return r;
-                              return {
-                                ...r,
-                                number: String(next.number ?? r.number),
-                                dateJalali: String(next.dateJalali ?? r.dateJalali),
-                                giver: String(next.giver ?? r.giver),
-                                receiver: String(next.receiver ?? r.receiver),
-                                details: String(next.details ?? r.details),
-                                amount: Number(next.amount ?? r.amount),
-                              };
-                            }) as unknown as OpsRow[]
-                          );
-                        }}
-                        onDelete={() =>
-                          setList(
-                            'journal',
-                            items.filter((r) => r.id !== row.id) as unknown as OpsRow[]
-                          )
-                        }
-                      />
+                      <Button size="sm" variant="outline" onClick={() => openCreate(row.id)}>
+                        <Plus className="ms-2 h-4 w-4" />
+                        {tx('سطر بعد', 'Insert below')}
+                      </Button>
                     }
                   />
                 ))
-              )
-            }
-          />
-        </CardContent>
+              )}
+              <Button className="w-full" onClick={() => openCreate(null)}>
+                <Plus className="ms-2 h-4 w-4" />
+                {tx('سطر جدید', 'New line')}
+              </Button>
+            </div>
+          }
+        />
       </Card>
 
       <CompactFormDialog
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title={tx('ثبت روزنامچه', 'Post journal')}
+        onClose={() => {
+          setCreateOpen(false);
+          setInsertAfterId(null);
+        }}
+        title={
+          insertAfterId
+            ? tx('سطر جدید بین معاملات', 'Insert line between entries')
+            : tx('ثبت سطر روزنامچه', 'Post journal line')
+        }
         description={tx(
-          'مقدار جنسی (تن) یا مبلغ نقدی — و اتصال به پارتی، قرارداد، ذخیره، مشتری یا تأمین‌کننده.',
-          'Quantity (tons) or cash amount — and a link to party, contract, storage, customer or vendor.'
+          'مشتری، تأمین‌کننده، صرافی، بانک، شرکا، دارایی و … را وصل کنید تا در همان حساب ثبت شود.',
+          'Link customer, vendor, exchange, bank, partners, assets, etc. so the line posts to that account.'
         )}
         size="xl"
         fields={[
-          { key: 'number', label: tx('نمبر روزنامچه', 'Journal serial'), required: true, dir: 'ltr' },
-          { key: 'date', label: tx('تاریخ', 'Date'), type: 'date', required: true },
-          { key: 'giver', label: tx('دهنده', 'Giver') },
-          { key: 'receiver', label: tx('گیرنده', 'Receiver') },
-          { key: 'details', label: tx('تفصیلات', 'Details'), required: true },
-          { key: 'qty', label: tx('مقدار', 'Qty'), type: 'number' },
-          { key: 'unit', label: tx('واحد', 'Unit'), placeholder: 'تن' },
-          { key: 'amount', label: tx('مبلغ', 'Amount'), type: 'number' },
+          { key: 'number', label: tx('نمبر روزنامچه', 'Serial'), required: true, dir: 'ltr' },
           {
             key: 'opType',
-            label: tx('نوع', 'Type'),
+            label: tx('نوع عملیات', 'Operation'),
             type: 'select',
             options: Object.entries(JOURNAL_OP_LABELS).map(([value, lab]) => ({
               value,
               label: lab.fa,
             })),
           },
+          { key: 'giver', label: tx('دهنده', 'Giver') },
+          { key: 'receiver', label: tx('گیرنده', 'Receiver') },
+          { key: 'details', label: tx('تفصیلات', 'Details'), required: true },
+          { key: 'qty', label: tx('مقدار', 'Qty'), type: 'number' },
+          { key: 'unit', label: tx('واحد', 'Unit'), placeholder: 'تن' },
+          { key: 'amount', label: tx('مبلغ', 'Amount'), type: 'number' },
           {
             key: 'customerId',
             label: tx('مشتری', 'Customer'),
@@ -486,6 +653,24 @@ export default function JournalPage() {
             label: tx('تأمین‌کننده', 'Vendor'),
             type: 'select',
             options: linkOptions.suppliers,
+          },
+          {
+            key: 'exchangeId',
+            label: tx('صرافی', 'Exchange'),
+            type: 'select',
+            options: linkOptions.exchanges,
+          },
+          {
+            key: 'bankAccountId',
+            label: tx('بانک', 'Bank'),
+            type: 'select',
+            options: linkOptions.banks,
+          },
+          {
+            key: 'cash',
+            label: tx('صندوق / خزانه', 'Cash / treasury'),
+            type: 'checkbox',
+            placeholder: tx('وصل به صندوق', 'Link cash'),
           },
           {
             key: 'contractId',
@@ -501,27 +686,15 @@ export default function JournalPage() {
           },
           {
             key: 'warehouseId',
-            label: tx('ذخیره', 'Storage'),
+            label: tx('ذخیره / بارگیری', 'Storage / loading'),
             type: 'select',
             options: linkOptions.warehouses,
           },
           {
-            key: 'exchangeId',
-            label: tx('صراف', 'Exchange'),
+            key: 'ledgerAccountId',
+            label: tx('حساب دفتر کل (شرکا / دارایی / استهلاک / طلبات متفرقه)', 'Ledger account'),
             type: 'select',
-            options: linkOptions.exchanges,
-          },
-          {
-            key: 'bank',
-            label: tx('بانک', 'Bank'),
-            type: 'checkbox',
-            placeholder: tx('وصل به بانک', 'Link to banks'),
-          },
-          {
-            key: 'cash',
-            label: tx('صندوق', 'Cash'),
-            type: 'checkbox',
-            placeholder: tx('وصل به صندوق', 'Link to cash'),
+            options: linkOptions.chart,
           },
           { key: 'markH', label: 'ه', type: 'checkbox', placeholder: 'ه' },
           { key: 'markA', label: 'ح', type: 'checkbox', placeholder: 'ح' },
@@ -540,30 +713,33 @@ export default function JournalPage() {
         ]}
         initial={{
           number: defaultBook,
-          date: todayIso(),
           unit: 'تن',
-          opType: 'other',
+          opType: 'receipt',
           company: defaultCompany,
         }}
-        submitLabel={tx('ثبت', 'Post')}
+        submitLabel={tx('ثبت در همین روز', 'Post to this day')}
         onSubmit={(v) => {
-          const when = parseIsoDate(v.date || todayIso());
-          const links: JournalLinks = {};
-          if (Number(v.customerId)) links.customerId = Number(v.customerId);
-          if (Number(v.supplierId)) links.supplierId = Number(v.supplierId);
-          if (Number(v.contractId)) links.contractId = Number(v.contractId);
-          if (Number(v.partyId)) links.partyId = Number(v.partyId);
-          if (Number(v.warehouseId)) links.warehouseId = Number(v.warehouseId);
-          if (Number(v.exchangeId)) links.exchangeId = Number(v.exchangeId);
-          if (v.bank === '1') links.bank = true;
-          if (v.cash === '1') links.cash = true;
+          const when = dayDate;
+          const links = buildLinks(v);
+          const names = autoNamesFromLinks(v);
+          const afterIdx = insertAfterId
+            ? dayRows.findIndex((r) => r.id === insertAfterId)
+            : -1;
+          const prev = afterIdx >= 0 ? dayRows[afterIdx] : dayRows[dayRows.length - 1];
+          const next = afterIdx >= 0 ? dayRows[afterIdx + 1] : undefined;
+          const lineOrder =
+            afterIdx >= 0
+              ? lineOrderBetween(prev, next)
+              : nextLineOrder(dayRows);
+
           addToList('journal', {
-            number: v.number.trim(),
-            dateJalali: formatJalali(when),
-            dateGregorian: gregorianFromIso(v.date || todayIso()),
-            weekday: formatJalaliWeekday(when),
-            giver: v.giver,
-            receiver: v.receiver,
+            number: v.number.trim() || defaultBook,
+            dateIso: dayIso,
+            dateJalali: dayJalali,
+            dateGregorian: dayGregorian,
+            weekday: dayWeekday,
+            giver: names.giver,
+            receiver: names.receiver,
             details: v.details,
             amount: Number(v.amount || 0),
             qty: Number(v.qty || 0),
@@ -572,6 +748,7 @@ export default function JournalPage() {
             opType: v.opType,
             status: v.opType === 'receipt' ? 'received' : 'posted',
             company: (v.company as CompanyKey) || defaultCompany,
+            lineOrder,
             links,
             marks: {
               office: v.markH === '1',
@@ -580,6 +757,7 @@ export default function JournalPage() {
               chief: v.markC === '1',
             },
           });
+          setInsertAfterId(null);
         }}
       />
     </div>

@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, LayoutDashboard, MoreHorizontal, Users, Wallet } from 'lucide-react';
+import { BarChart3, BookOpen, LayoutDashboard, MoreHorizontal, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
 
 const items = [
   { href: '/dashboard', labelKey: 'mobileNavDashboard' as const, icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/journal', labelKey: 'mobileNavOperations' as const, icon: Wallet },
+  { href: '/dashboard/journal', labelKey: 'mobileNavOperations' as const, icon: BookOpen },
   { href: '/dashboard/reports', labelKey: 'mobileNavReports' as const, icon: BarChart3 },
   { href: '/dashboard/customers', labelKey: 'mobileNavCustomers' as const, icon: Users },
 ];

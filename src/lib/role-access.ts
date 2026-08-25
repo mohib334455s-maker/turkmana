@@ -11,6 +11,7 @@ import type { CustomRole } from '@/lib/custom-roles-store';
 export const ROLE_MODULE_KEYS: Record<UserRole, NavKey[]> = {
   admin: [
     'dashboard',
+    'journal',
     'contracts',
     'purchases',
     'warehouses',
@@ -29,6 +30,7 @@ export const ROLE_MODULE_KEYS: Record<UserRole, NavKey[]> = {
   ],
   manager: [
     'dashboard',
+    'journal',
     'contracts',
     'purchases',
     'warehouses',
@@ -46,6 +48,7 @@ export const ROLE_MODULE_KEYS: Record<UserRole, NavKey[]> = {
   ],
   accountant: [
     'dashboard',
+    'journal',
     'finance',
     'exchange',
     'customers',
@@ -57,6 +60,7 @@ export const ROLE_MODULE_KEYS: Record<UserRole, NavKey[]> = {
   ],
   warehouse: [
     'dashboard',
+    'journal',
     'warehouses',
     'imports',
     'transport',
@@ -65,13 +69,14 @@ export const ROLE_MODULE_KEYS: Record<UserRole, NavKey[]> = {
   ],
   sales: [
     'dashboard',
+    'journal',
     'sales',
     'customers',
     'representatives',
     'warehouses',
     'notifications',
   ],
-  user: ['dashboard', 'finance', 'customers', 'reports', 'notifications'],
+  user: ['dashboard', 'journal', 'finance', 'customers', 'reports', 'notifications'],
 };
 
 /** Settings sub-pages allowed per role. */

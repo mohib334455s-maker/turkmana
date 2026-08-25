@@ -12,19 +12,20 @@ export type JournalOpType =
   | 'goods_report'
   | 'loan'
   | 'settlement'
+  | 'partner'
+  | 'asset'
+  | 'depreciation'
+  | 'misc_receivable'
   | 'other';
 
 export type JournalApprovalMarks = {
-  /** ه — دفتر / هرات */
   office: boolean;
-  /** ح — حسابداری */
   accounting: boolean;
-  /** ن — نظارت */
   supervisor: boolean;
-  /** ا — آمر */
   chief: boolean;
 };
 
+/** Links a journal line to real accounts / modules. */
 export type JournalLinks = {
   customerId?: number;
   supplierId?: number;
@@ -35,8 +36,18 @@ export type JournalLinks = {
   saleId?: number;
   purchaseId?: number;
   expenseId?: number;
+  bankAccountId?: number;
+  cashAccountId?: number;
+  /** @deprecated prefer bankAccountId */
   bank?: boolean;
+  /** @deprecated prefer cashAccountId */
   cash?: boolean;
+  /** Chart-of-accounts style links */
+  partnerAccountId?: number;
+  miscReceivableId?: number;
+  assetAccountId?: number;
+  depreciationAccountId?: number;
+  ledgerAccountId?: number;
 };
 
 export type JournalEntryRow = {
@@ -44,6 +55,7 @@ export type JournalEntryRow = {
   number: string;
   dateJalali: string;
   dateGregorian: string;
+  dateIso?: string;
   weekday?: string;
   giver: string;
   receiver: string;
@@ -55,6 +67,8 @@ export type JournalEntryRow = {
   opType: JournalOpType | string;
   status: string;
   company: CompanyKey;
+  /** Sort order within the day (lower = earlier). */
+  lineOrder?: number;
   links?: JournalLinks;
   marks?: JournalApprovalMarks;
 };
@@ -65,16 +79,19 @@ export const JOURNAL_OP_LABELS: Record<string, { fa: string; en: string }> = {
   purchase: { fa: 'خرید', en: 'Purchase' },
   sale: { fa: 'فروش', en: 'Sale' },
   transfer: { fa: 'انتقال', en: 'Transfer' },
-  expense: { fa: 'هزینه', en: 'Expense' },
+  expense: { fa: 'مصارف', en: 'Expense' },
   loading: { fa: 'بارگیری', en: 'Loading' },
   unload: { fa: 'تخلیه', en: 'Unload' },
   goods_report: { fa: 'راپور جنسی', en: 'Goods report' },
   loan: { fa: 'قرضه', en: 'Loan' },
   settlement: { fa: 'تسویه', en: 'Settlement' },
+  partner: { fa: 'حساب شرکا', en: 'Partners' },
+  asset: { fa: 'دارایی', en: 'Asset' },
+  depreciation: { fa: 'استهلاک', en: 'Depreciation' },
+  misc_receivable: { fa: 'طلبات متفرقه', en: 'Misc. receivables' },
   other: { fa: 'سایر', en: 'Other' },
 };
 
-/** Letter headers from the paper journal — meaning is left unlabeled until confirmed. */
 export const JOURNAL_MARK_META = [
   { key: 'office' as const, fa: 'ه', en: 'ه' },
   { key: 'accounting' as const, fa: 'ح', en: 'ح' },
@@ -99,7 +116,6 @@ export type JournalLinkChip = {
   labelEn: string;
 };
 
-/** Resolve every linked account to a real route so journal chips never go nowhere. */
 export function resolveJournalLinks(links?: JournalLinks): JournalLinkChip[] {
   if (!links) return [];
   const out: JournalLinkChip[] = [];
@@ -158,11 +174,24 @@ export function resolveJournalLinks(links?: JournalLinks): JournalLinkChip[] {
       labelEn: 'Expenses',
     });
   }
-  if (links.bank) {
-    out.push({ href: '/dashboard/finance/banks', labelFa: 'بانک', labelEn: 'Bank' });
+  if (links.bankAccountId || links.bank) {
+    out.push({
+      href: links.bankAccountId
+        ? `/dashboard/finance/banks`
+        : '/dashboard/finance/banks',
+      labelFa: 'بانک',
+      labelEn: 'Bank',
+    });
   }
-  if (links.cash) {
-    out.push({ href: '/dashboard/finance/cash', labelFa: 'صندوق', labelEn: 'Cash' });
+  if (links.cashAccountId || links.cash) {
+    out.push({ href: '/dashboard/finance/cash', labelFa: 'صندوق/خزانه', labelEn: 'Cash' });
+  }
+  if (links.partnerAccountId || links.miscReceivableId || links.assetAccountId || links.depreciationAccountId || links.ledgerAccountId) {
+    out.push({
+      href: '/dashboard/finance/ledger',
+      labelFa: 'حساب دفتر کل',
+      labelEn: 'Ledger account',
+    });
   }
   return out;
 }
@@ -181,6 +210,8 @@ export function journalMatchesLink(
   if (filter.saleId && links.saleId === filter.saleId) return true;
   if (filter.purchaseId && links.purchaseId === filter.purchaseId) return true;
   if (filter.expenseId && links.expenseId === filter.expenseId) return true;
+  if (filter.partnerAccountId && links.partnerAccountId === filter.partnerAccountId) return true;
+  if (filter.ledgerAccountId && links.ledgerAccountId === filter.ledgerAccountId) return true;
   return false;
 }
 
@@ -189,4 +220,30 @@ export function nextJournalBookNumber(rows: Array<Record<string, unknown>>) {
     .map((r) => Number(String(r.number ?? '').replace(/[^\d]/g, '')))
     .filter((n) => Number.isFinite(n) && n > 0);
   return String((nums.length ? Math.max(...nums) : 0) + 1);
+}
+
+export function sortDayRows<T extends { lineOrder?: number; id: number }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const ao = a.lineOrder ?? a.id;
+    const bo = b.lineOrder ?? b.id;
+    if (ao !== bo) return ao - bo;
+    return a.id - b.id;
+  });
+}
+
+export function nextLineOrder(dayRows: Array<{ lineOrder?: number; id: number }>) {
+  if (!dayRows.length) return 10;
+  const max = Math.max(...dayRows.map((r) => r.lineOrder ?? r.id));
+  return max + 10;
+}
+
+/** Insert between prev and next by averaging orders (or append). */
+export function lineOrderBetween(
+  prev?: { lineOrder?: number; id: number },
+  next?: { lineOrder?: number; id: number }
+) {
+  const p = prev ? prev.lineOrder ?? prev.id : 0;
+  const n = next ? next.lineOrder ?? next.id : p + 20;
+  if (n > p) return Math.floor((p + n) / 2) || p + 1;
+  return p + 10;
 }

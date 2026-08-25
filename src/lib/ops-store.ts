@@ -239,6 +239,7 @@ function makeJournalRow(
   return {
     id: nextId(prev),
     number,
+    dateIso: input.dateIso || todayIso(),
     dateJalali,
     dateGregorian: gregorianFromIso(input.dateIso || todayIso()),
     weekday: formatJalaliWeekday(when),
@@ -252,6 +253,7 @@ function makeJournalRow(
     opType: input.opType,
     status: 'posted',
     company: input.company,
+    lineOrder: (sameDay.length + 1) * 10,
     links: input.links,
     marks: emptyMarks(),
   };

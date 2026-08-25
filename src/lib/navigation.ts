@@ -15,6 +15,7 @@ import {
   Briefcase,
   Bell,
   Handshake,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 import type { NavKey } from '@/lib/i18n/messages';
@@ -40,6 +41,15 @@ export const navModules: NavModule[] = [
     accent: 'text-teal-600',
     soft: 'from-teal-500/15 to-teal-500/5',
     ring: 'ring-teal-200/70',
+  },
+  {
+    key: 'journal',
+    descKey: 'journalDesc',
+    icon: BookOpen,
+    href: '/dashboard/journal',
+    accent: 'text-indigo-700',
+    soft: 'from-indigo-500/15 to-indigo-500/5',
+    ring: 'ring-indigo-200/70',
   },
   {
     key: 'contracts',
@@ -78,6 +88,7 @@ export const navModules: NavModule[] = [
     children: [
       { key: 'warehousesList', href: '/dashboard/warehouses' },
       { key: 'inventory', href: '/dashboard/inventory' },
+      { key: 'loadingUnload', href: '/dashboard/warehouses/loading' },
       { key: 'transfers', href: '/dashboard/warehouses/transfers' },
       { key: 'tanks', href: '/dashboard/warehouses/tanks' },
       { key: 'stocktake', href: '/dashboard/warehouses/stocktake' },
@@ -170,7 +181,6 @@ export const navModules: NavModule[] = [
     soft: 'from-teal-600/15 to-teal-600/5',
     ring: 'ring-teal-200/70',
     children: [
-      { key: 'journal', href: '/dashboard/journal' },
       { key: 'balanceSheet', href: '/dashboard/balance-sheet' },
       { key: 'cash', href: '/dashboard/finance/cash' },
       { key: 'ledger', href: '/dashboard/finance/ledger' },

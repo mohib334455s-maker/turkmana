@@ -1,4 +1,5 @@
 import type { CrudRow } from '@/components/shared/crud-page';
+import { seedLedgerRows } from '@/lib/chart-accounts';
 
 const empty: CrudRow[] = [];
 
@@ -23,7 +24,7 @@ export const demoRows = {
   payables: empty,
   banks: empty,
   cashAccounts: empty,
-  ledgerAccounts: empty,
+  ledgerAccounts: seedLedgerRows('arya') as unknown as CrudRow[],
   journalVouchers: empty,
   expenses: empty,
   currencies: empty,

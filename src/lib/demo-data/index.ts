@@ -217,6 +217,7 @@ export type JournalEntry = {
   number: string;
   dateJalali: string;
   dateGregorian: string;
+  dateIso?: string;
   weekday?: string;
   giver: string;
   receiver: string;
@@ -228,6 +229,7 @@ export type JournalEntry = {
   opType: string;
   status: string;
   company: CompanyKey;
+  lineOrder?: number;
   links?: Record<string, number | boolean>;
   marks?: {
     office?: boolean;

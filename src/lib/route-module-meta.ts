@@ -49,7 +49,7 @@ export type RouteModuleMeta = {
 const exactRoutes: Record<string, RouteModuleMeta> = {
   '/dashboard': { navKey: 'dashboard', icon: BarChart3 },
 
-  '/dashboard/journal': { navKey: 'finance', icon: BookOpen },
+  '/dashboard/journal': { navKey: 'journal', icon: BookOpen },
   '/dashboard/exchange': { navKey: 'exchange', icon: Banknote },
   '/dashboard/customers/summary': { navKey: 'customers', icon: Layers },
   '/dashboard/profit-loss': { navKey: 'finance', icon: Scale },

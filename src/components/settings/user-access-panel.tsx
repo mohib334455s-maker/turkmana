@@ -7,9 +7,9 @@ import {
   buildUserAccessSummary,
   type UserAccessSummary,
 } from '@/lib/role-access';
-import type { UserRole } from '@/lib/auth-store';
 import type { CompanyAccess } from '@/lib/company-access';
 import { usePermissionsStore } from '@/lib/permissions';
+import { useCustomRolesStore } from '@/lib/custom-roles-store';
 import { cn } from '@/lib/utils';
 
 function AccessBadges({
@@ -40,6 +40,12 @@ function AccessBadges({
             {tx('بدون مفاد و ضرر', 'No P&L')}
           </Badge>
         )}
+        {summary.companyNetworkOnly ? (
+          <Badge variant="warning">{tx('فقط شبکه شرکت', 'LAN only')}</Badge>
+        ) : null}
+        {summary.blockMobile ? (
+          <Badge variant="warning">{tx('بدون موبایل', 'No mobile')}</Badge>
+        ) : null}
       </div>
       <p className="text-xs leading-6 text-slate-500">{summary.companyDetail}</p>
       {!compact ? (
@@ -88,7 +94,7 @@ export function UserAccessCard({
   className,
   compact,
 }: {
-  role: UserRole;
+  role: string;
   companyAccess: CompanyAccess;
   title?: string;
   subtitle?: string;
@@ -97,7 +103,14 @@ export function UserAccessCard({
 }) {
   const { locale } = useI18n();
   const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
-  const summary = buildUserAccessSummary(role, companyAccess, locale, profitLossRoles);
+  const customRoles = useCustomRolesStore((s) => s.roles);
+  const summary = buildUserAccessSummary(
+    role,
+    companyAccess,
+    locale,
+    profitLossRoles,
+    customRoles
+  );
 
   return (
     <Card className={cn('border-slate-200 shadow-none', className)}>
@@ -119,18 +132,21 @@ export function UserAccessCard({
 export function RoleAccessMatrix() {
   const { locale, tx, tn } = useI18n();
   const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
+  const customRoles = useCustomRolesStore((s) => s.roles);
 
   const rows = (
     [
       'admin',
-      'manager',
-      'accountant',
-      'warehouse',
-      'sales',
-      'user',
-    ] as UserRole[]
+      ...customRoles.map((r) => r.id),
+    ] as string[]
   ).map((role) =>
-    buildUserAccessSummary(role, role === 'admin' ? 'both' : 'arya', locale, profitLossRoles)
+    buildUserAccessSummary(
+      role,
+      role === 'admin' ? 'both' : 'arya',
+      locale,
+      profitLossRoles,
+      customRoles
+    )
   );
 
   return (

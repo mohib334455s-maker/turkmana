@@ -14,9 +14,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
-import { canManageUsers, useAuthStore } from '@/lib/auth-store';
+import { useAuthStore, canManageUsers, canManageRoles } from '@/lib/auth-store';
 import { canViewProfitLoss, usePermissionsStore } from '@/lib/permissions';
 import { useCompanyStore } from '@/lib/company-store';
+import { moduleKeysForRole, deniedChildrenForRole } from '@/lib/role-access';
+import { useCustomRolesStore } from '@/lib/custom-roles-store';
 import { CompanyLogo } from '@/components/brand/company-logo';
 import { companyBrandName } from '@/lib/brand';
 import type { NavKey } from '@/lib/i18n/messages';
@@ -44,17 +46,28 @@ export function Sidebar() {
   const company = useCompanyStore((s) => s.company);
   const companyName = companyBrandName(company, locale);
   const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
+  const customRoles = useCustomRolesStore((s) => s.roles);
   const pnlOk = canViewProfitLoss(role, profitLossRoles);
-  const visibleModules = navModules.map((mod) => {
-    let children = mod.children;
-    if (mod.key === 'settings' && !canManageUsers(role)) {
-      children = children?.filter((c) => c.key !== 'users' && c.key !== 'roles');
-    }
-    if (mod.key === 'finance' && !pnlOk) {
-      children = children?.filter((c) => c.key !== 'profitLoss');
-    }
-    return children === mod.children ? mod : { ...mod, children };
-  });
+  const allowedModules = new Set(moduleKeysForRole(role, customRoles));
+  const deniedPages = new Set(deniedChildrenForRole(role, customRoles));
+
+  const visibleModules = navModules
+    .filter((mod) => role === 'admin' || allowedModules.has(mod.key))
+    .map((mod) => {
+      let children = mod.children?.filter((c) => !deniedPages.has(c.key));
+      if (mod.key === 'settings') {
+        if (!canManageUsers(role)) {
+          children = children?.filter((c) => c.key !== 'users');
+        }
+        if (!canManageRoles(role)) {
+          children = children?.filter((c) => c.key !== 'roles');
+        }
+      }
+      if (mod.key === 'finance' && !pnlOk) {
+        children = children?.filter((c) => c.key !== 'profitLoss');
+      }
+      return children === mod.children ? mod : { ...mod, children };
+    });
 
   useEffect(() => {
     navModules.forEach((mod) => {

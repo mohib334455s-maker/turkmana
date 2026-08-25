@@ -1,167 +1,205 @@
 'use client';
 
-import { Building2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
-import { ExportButtons } from '@/components/shared/export-buttons';
-import { ModuleIcon } from '@/components/shared/module-icon';
-import {
-  RoleAccessMatrix,
-  UserAccessCard,
-} from '@/components/settings/user-access-panel';
-import { useI18n } from '@/lib/i18n/store';
-import { systemRoles } from '@/lib/roles';
-import { COMPANY_ACCESS_LABELS } from '@/lib/company-access';
-import { canGrantProfitLoss, usePermissionsStore } from '@/lib/permissions';
-import { useAuthStore, type UserRole } from '@/lib/auth-store';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { CompanyAccess } from '@/lib/company-access';
-
-const companyRules: Array<{
-  key: CompanyAccess;
-  titleFa: string;
-  titleEn: string;
-  bodyFa: string;
-  bodyEn: string;
-}> = [
-  {
-    key: 'arya',
-    titleFa: 'فقط آزیا آریا لمتید',
-    titleEn: 'Azya Aria Ltd only',
-    bodyFa: 'کاربر فقط داده، گدام، قرارداد و حساب‌های آریا را می‌بیند. سوئیچ ترکمن برایش ظاهر نمی‌شود.',
-    bodyEn: 'User only sees Arya data, warehouses, contracts and ledgers. Turkmen switch is hidden.',
-  },
-  {
-    key: 'turkmen',
-    titleFa: 'فقط ترکمن',
-    titleEn: 'Turkmen only',
-    bodyFa: 'کاربر فقط داده و عملیات ترکمن را می‌بیند. سوئیچ آریا برایش ظاهر نمی‌شود.',
-    bodyEn: 'User only sees Turkmen operations. Arya switch is hidden.',
-  },
-  {
-    key: 'both',
-    titleFa: 'آریا و ترکمن (سوئیچ)',
-    titleEn: 'Arya & Turkmen (switch)',
-    bodyFa: 'ادمین می‌تواند برای یک کاربر امکان جابه‌جایی بین دو شرکت را بدهد. هر بار فقط یک شرکت فعال است.',
-    bodyEn: 'Admin can grant switching between both companies. One active company at a time.',
-  },
-];
+import { Badge } from '@/components/ui/badge';
+import { RoleEditorDialog } from '@/components/settings/role-editor-dialog';
+import { UserAccessCard } from '@/components/settings/user-access-panel';
+import {
+  syncRolesToServer,
+  useCustomRolesStore,
+  type CustomRole,
+} from '@/lib/custom-roles-store';
+import { useAuthStore } from '@/lib/auth-store';
+import { moduleKeysForRole } from '@/lib/role-access';
+import { useI18n } from '@/lib/i18n/store';
 
 export default function RolesPage() {
-  const { locale, t, tx } = useI18n();
-  const isFa = locale === 'fa';
+  const { tx, locale } = useI18n();
   const role = useAuthStore((s) => s.role);
-  const profitLossRoles = usePermissionsStore((s) => s.profitLossRoles);
-  const toggleProfitLossRole = usePermissionsStore((s) => s.toggleProfitLossRole);
-  const canGrant = canGrantProfitLoss(role);
+  const isAdmin = role === 'admin';
+  const customRoles = useCustomRolesStore((s) => s.roles);
+  const addRole = useCustomRolesStore((s) => s.addRole);
+  const updateRole = useCustomRolesStore((s) => s.updateRole);
+  const removeRole = useCustomRolesStore((s) => s.removeRole);
+
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editing, setEditing] = useState<CustomRole | null>(null);
+
+  useEffect(() => {
+    if (isAdmin) void syncRolesToServer(customRoles);
+  }, [customRoles, isAdmin]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setEditorOpen(true);
+  };
+
+  const openEdit = (r: CustomRole) => {
+    setEditing(r);
+    setEditorOpen(true);
+  };
+
+  const handleSave = (values: Omit<CustomRole, 'createdAt'>) => {
+    if (editing) {
+      updateRole(editing.id, values);
+    } else {
+      addRole(values);
+    }
+    void syncRolesToServer(useCustomRolesStore.getState().roles);
+  };
+
+  if (!isAdmin) {
+    return (
+      <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-8 text-center">
+        <p className="font-bold text-rose-800">
+          {tx('فقط ادمین می‌تواند نقش‌ها را مدیریت کند', 'Only admin can manage roles')}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title={isFa ? 'نقش‌ها و دسترسی' : 'Roles & access'}
-        description={
-          isFa
-            ? 'برای هر نقش: شرکت مجاز، ماژول‌ها، صفحات و صلاحیت‌های خاص (مثل مفاد و ضرر)'
-            : 'Per role: allowed company, modules, pages and special permissions (e.g. P&L)'
-        }
+        title={tx('نقش‌ها و دسترسی', 'Roles & access')}
+        description={tx(
+          'نام نقش را خودتان بگذارید و مشخص کنید به کدام بخش‌ها دسترسی دارد',
+          'Name each role and choose which sections it can access'
+        )}
         actions={
-          <ExportButtons
-            filename="roles"
-            title={isFa ? 'نقش‌ها' : 'Roles'}
-            columns={[
-              { key: 'title', label: isFa ? 'نقش' : 'Role' },
-              { key: 'access', label: isFa ? 'دسترسی' : 'Access' },
-              { key: 'users', label: isFa ? 'کاربران' : 'Users' },
-            ]}
-            rows={systemRoles.map((r) => ({
-              title: isFa ? r.titleFa : r.titleEn,
-              access: isFa ? r.accessFa : r.accessEn,
-              users: r.users,
-            }))}
-          />
+          <Button onClick={openCreate}>
+            <Plus className="ms-2 h-4 w-4" />
+            {tx('افزودن نقش', 'Add role')}
+          </Button>
         }
       />
 
-      <section>
-        <h2 className="text-base font-extrabold text-slate-900">{t('accessMatrixTitle')}</h2>
-        <p className="mt-1 text-sm text-slate-500">{t('accessMatrixDesc')}</p>
-        <div className="mt-4">
-          <RoleAccessMatrix />
-        </div>
-      </section>
-
-      <Card className="border-amber-100">
-        <CardContent className="space-y-3 p-5">
-          <p className="text-[15px] font-extrabold text-slate-900">
-            {isFa ? 'صلاحیت مفاد و ضرر' : 'Profit & loss access'}
-          </p>
-          <p className="text-xs leading-6 text-slate-500">
-            {isFa
-              ? 'بعضی نقش‌ها اصلاً نباید قسمت مفاد و ضرر را ببینند. فقط ادمین می‌تواند این صلاحیت را قید یا باز کند.'
-              : 'Some roles must not see profit & loss. Only an admin can grant or revoke this.'}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {systemRoles.map((r) => {
-              const on = r.key === 'admin' || profitLossRoles.includes(r.key as UserRole);
-              return (
-                <Button
-                  key={r.key}
-                  type="button"
-                  size="sm"
-                  variant={on ? 'default' : 'outline'}
-                  disabled={!canGrant || r.key === 'admin'}
-                  onClick={() => toggleProfitLossRole(r.key)}
-                >
-                  {isFa ? r.titleFa : r.titleEn}
-                  {on ? ' ✓' : ''}
-                </Button>
-              );
-            })}
+      <Card className="border-teal-200 bg-teal-50/40 shadow-none">
+        <CardContent className="flex items-start gap-4 p-5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="font-extrabold text-slate-900">{tx('نقش ادمین', 'Admin role')}</p>
+            <p className="mt-1 text-sm text-slate-600">
+              {tx(
+                'تنها نقش ثابت سیستم — دسترسی کامل، مدیریت کاربران و نقش‌ها',
+                'The only fixed system role — full access, users and roles management'
+              )}
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        {companyRules.map((rule) => (
-          <Card key={rule.key} className="border-teal-100">
-            <CardContent className="p-5">
-              <ModuleIcon icon={Building2} moduleKey="settings" size="md" />
-              <p className="mt-3 text-[15px] font-extrabold text-slate-900">
-                {isFa ? rule.titleFa : rule.titleEn}
-              </p>
-              <p className="mt-1 text-xs leading-6 text-slate-500">
-                {isFa ? rule.bodyFa : rule.bodyEn}
-              </p>
-              <p className="mt-3 text-[11px] text-slate-400">
-                {COMPANY_ACCESS_LABELS[rule.key].fa}
-                {' / '}
-                {COMPANY_ACCESS_LABELS[rule.key].en}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <UserAccessCard
+        role="admin"
+        companyAccess="both"
+        title={tx('مدیر سیستم (ادمین)', 'System admin')}
+        compact
+      />
 
       <section>
         <h2 className="text-base font-extrabold text-slate-900">
-          {tx('جزئیات کامل هر نقش', 'Full detail per role')}
+          {tx('نقش‌های سفارشی', 'Custom roles')} ({customRoles.length})
         </h2>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {systemRoles.map((roleDef) => {
-            const sampleCompany: CompanyAccess =
-              roleDef.key === 'admin' ? 'both' : 'arya';
-            return (
-              <UserAccessCard
-                key={roleDef.key}
-                role={roleDef.key}
-                companyAccess={sampleCompany}
-                title={isFa ? roleDef.titleFa : roleDef.titleEn}
-                subtitle={isFa ? roleDef.accessFa : roleDef.accessEn}
-              />
-            );
-          })}
-        </div>
+        <p className="mt-1 text-sm text-slate-500">
+          {tx(
+            'هر نقش: بخش‌های مجاز، مفاد و ضرر، محدودیت IP و موبایل',
+            'Each role: allowed sections, P&L, IP and mobile restrictions'
+          )}
+        </p>
+
+        {customRoles.length === 0 ? (
+          <Card className="mt-4 rounded-2xl border-dashed border-slate-200 shadow-none">
+            <CardContent className="py-12 text-center">
+              <p className="text-sm text-slate-500">
+                {tx('هنوز نقش سفارشی نساخته‌اید', 'No custom roles yet')}
+              </p>
+              <Button className="mt-4" onClick={openCreate}>
+                <Plus className="ms-2 h-4 w-4" />
+                {tx('اولین نقش', 'First role')}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {customRoles.map((r) => (
+              <Card key={r.id} className="rounded-2xl border-slate-200 shadow-none">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-base font-extrabold text-slate-900">{r.name}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400 num">{r.id}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-rose-600"
+                        onClick={() => {
+                          if (window.confirm(tx('حذف این نقش؟', 'Delete this role?'))) {
+                            removeRole(r.id);
+                            void syncRolesToServer(useCustomRolesStore.getState().roles);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {moduleKeysForRole(r.id, customRoles)
+                      .slice(0, 6)
+                      .map((k) => (
+                        <Badge key={k} variant="muted">
+                          {k}
+                        </Badge>
+                      ))}
+                    {moduleKeysForRole(r.id, customRoles).length > 6 ? (
+                      <span className="text-[10px] text-slate-400">
+                        +{moduleKeysForRole(r.id, customRoles).length - 6}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                    {r.profitLoss ? (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800">
+                        P&L
+                      </span>
+                    ) : null}
+                    {r.companyNetworkOnly ? (
+                      <span className="rounded-full bg-sky-100 px-2 py-0.5 font-bold text-sky-800">
+                        {tx('فقط شبکه شرکت', 'LAN only')}
+                      </span>
+                    ) : null}
+                    {r.blockMobile ? (
+                      <span className="rounded-full bg-rose-100 px-2 py-0.5 font-bold text-rose-800">
+                        {tx('بدون موبایل', 'No mobile')}
+                      </span>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
+
+      <RoleEditorDialog
+        open={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        initial={editing}
+        onSave={handleSave}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Globe2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,11 +14,25 @@ export function LoginForm() {
   const { t, locale, dir } = useI18n();
   const toggleLocale = useUiStore((s) => s.toggleLocale);
   const setSession = useAuthStore((s) => s.setSession);
+  const searchParams = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => {
+    const reason = searchParams.get('reason');
+    if (reason === 'mobile_blocked') {
+      return locale === 'fa'
+        ? 'این نقش اجازه ورود از موبایل را ندارد'
+        : 'This role cannot log in from mobile';
+    }
+    if (reason === 'network_blocked') {
+      return locale === 'fa'
+        ? 'این نقش فقط از شبکه داخلی شرکت قابل استفاده است'
+        : 'This role is limited to the company network';
+    }
+    return '';
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

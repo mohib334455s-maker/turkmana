@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { generateToken, verifyPassword } from '@/lib/auth';
 import { isDemoAuth } from '@/lib/demo-auth';
+import { checkNetworkAccess, getClientIp } from '@/lib/network-access';
+import { upsertPresence } from '@/lib/server/presence';
+import { resolveRolePolicy } from '@/lib/server/roles-config';
 
 const DEMO_USERS = [
   {
@@ -14,20 +18,43 @@ const DEMO_USERS = [
   },
 ];
 
-function loginSuccessResponse(user: {
-  id: number;
-  email: string;
-  fullName: string;
-  role?: string;
-  companyAccess?: string;
-}) {
+function loginSuccessResponse(
+  user: {
+    id: number;
+    email: string;
+    fullName: string;
+    role?: string;
+    companyAccess?: string;
+  },
+  request: Request
+) {
   const role = user.role ?? 'admin';
   const companyAccess = role === 'admin' ? 'both' : user.companyAccess ?? 'arya';
+  const policy = resolveRolePolicy(role);
+  const sessionId = randomUUID();
+  const ip = getClientIp(request);
+  const userAgent = request.headers.get('user-agent') ?? '';
+
+  upsertPresence({
+    sessionId,
+    userId: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    role,
+    ip,
+    userAgent,
+    loginAt: new Date().toISOString(),
+  });
+
   const token = generateToken({
     userId: user.id,
     email: user.email,
     role,
     companyAccess,
+    sessionId,
+    companyNetworkOnly: role !== 'admin' && Boolean(policy?.companyNetworkOnly),
+    blockMobile: role !== 'admin' && Boolean(policy?.blockMobile),
+    allowedCidrs: policy?.allowedCidrs,
   });
 
   const response = NextResponse.json({
@@ -47,10 +74,18 @@ function loginSuccessResponse(user: {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   return response;
+}
+
+function networkDenied(reason: 'mobile' | 'network') {
+  const message =
+    reason === 'mobile'
+      ? 'این نقش اجازه ورود از موبایل را ندارد — فقط از دستگاه شبکه شرکت استفاده کنید'
+      : 'این نقش فقط از شبکه داخلی شرکت قابل استفاده است';
+  return NextResponse.json({ error: message, reason }, { status: 403 });
 }
 
 export async function POST(request: Request) {
@@ -71,15 +106,35 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const ip = getClientIp(request);
+    const userAgent = request.headers.get('user-agent') ?? '';
+
     const demoUser = DEMO_USERS.find(
       (u) =>
         password === u.password &&
         (u.email.toLowerCase() === loginId || u.username.toLowerCase() === loginId)
     );
 
+    const checkUserNetwork = (role: string) => {
+      const policy = resolveRolePolicy(role);
+      if (!policy) return null;
+      return checkNetworkAccess({
+        ip,
+        userAgent,
+        policy: {
+          companyNetworkOnly: policy.companyNetworkOnly,
+          blockMobile: policy.blockMobile,
+          allowedCidrs: policy.allowedCidrs,
+        },
+      });
+    };
+
     if (isDemoAuth()) {
       if (demoUser) {
-        return loginSuccessResponse(demoUser);
+        const net = checkUserNetwork(demoUser.role);
+        if (net && !net.ok) return networkDenied(net.reason);
+        return loginSuccessResponse(demoUser, request);
       }
       return NextResponse.json(
         { error: 'نام کاربری یا رمز عبور نادرست است' },
@@ -111,17 +166,26 @@ export async function POST(request: Request) {
         );
       }
 
-      return loginSuccessResponse({
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-        companyAccess: (user as { companyAccess?: string }).companyAccess,
-      });
+      const role = user.role ?? 'user';
+      const net = checkUserNetwork(role);
+      if (net && !net.ok) return networkDenied(net.reason);
+
+      return loginSuccessResponse(
+        {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+          companyAccess: (user as { companyAccess?: string }).companyAccess,
+        },
+        request
+      );
     } catch (dbError) {
       console.error('Database login failed:', dbError);
       if (demoUser) {
-        return loginSuccessResponse(demoUser);
+        const net = checkUserNetwork(demoUser.role);
+        if (net && !net.ok) return networkDenied(net.reason);
+        return loginSuccessResponse(demoUser, request);
       }
       return NextResponse.json(
         { error: 'نام کاربری یا رمز عبور نادرست است' },
@@ -130,9 +194,6 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'خطا در ورود به سیستم' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'خطا در ورود به سیستم' }, { status: 500 });
   }
 }

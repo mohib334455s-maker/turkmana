@@ -45,7 +45,7 @@ import { allowedCompanyFilters } from '@/lib/company-access';
 import { CURRENCY_CATALOG } from '@/lib/currency-catalog';
 import { useCurrencyStore } from '@/lib/currency-store';
 import { UserAccessCard } from '@/components/settings/user-access-panel';
-import { canManageUsers, useAuthStore } from '@/lib/auth-store';
+import { canManageUsers, canManageRoles, useAuthStore } from '@/lib/auth-store';
 import { cn } from '@/lib/utils';
 import { FolderOpen, FolderPlus } from 'lucide-react';
 
@@ -71,6 +71,7 @@ export default function SettingsPage() {
   const companyAccess = useAuthStore((s) => s.companyAccess);
   const isAdmin = role === 'admin';
   const canManage = canManageUsers(role);
+  const canRoles = canManageRoles(role);
 
   const [saved, setSaved] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -131,7 +132,7 @@ export default function SettingsPage() {
       tone: 'from-rose-500/10 to-rose-600/5 border-rose-100 hover:border-rose-200',
       adminOnly: true,
     },
-  ].filter((item) => !item.adminOnly || canManage);
+  ].filter((item) => !item.adminOnly || canRoles);
 
   const storageKb = estimateBackupSizeKb();
   const storedKeys = countStoredKeys();

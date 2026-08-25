@@ -10,13 +10,16 @@ import { useI18n, useUiStore } from '@/lib/i18n/store';
 import { useAuthStore } from '@/lib/auth-store';
 import { useCompanyStore } from '@/lib/company-store';
 import { clampCompany } from '@/lib/company-access';
+import { syncRolesToServer, useCustomRolesStore } from '@/lib/custom-roles-store';
 import { cn } from '@/lib/utils';
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { dir } = useI18n();
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const setSession = useAuthStore((s) => s.setSession);
+  const role = useAuthStore((s) => s.role);
   const companyAccess = useAuthStore((s) => s.companyAccess);
+  const customRoles = useCustomRolesStore((s) => s.roles);
   const { company, setCompany } = useCompanyStore();
   const isRtl = dir === 'rtl';
 
@@ -33,6 +36,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     const next = clampCompany(company, companyAccess);
     if (next !== company) setCompany(next);
   }, [company, companyAccess, setCompany]);
+
+  useEffect(() => {
+    if (role !== 'admin') return;
+    void syncRolesToServer(customRoles);
+  }, [role, customRoles]);
+
+  useEffect(() => {
+    const beat = () => {
+      void fetch('/api/auth/presence', { method: 'POST', credentials: 'include' });
+    };
+    beat();
+    const id = window.setInterval(beat, 45_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   return (
     <div className="min-h-[100dvh] bg-[var(--surface)]" dir={dir}>

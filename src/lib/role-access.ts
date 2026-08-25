@@ -5,6 +5,7 @@ import type { NavKey } from '@/lib/i18n/messages';
 import { navModules } from '@/lib/navigation';
 import { canViewProfitLoss } from '@/lib/permissions';
 import { systemRoles } from '@/lib/roles';
+import type { CustomRole } from '@/lib/custom-roles-store';
 
 /** Top-level sidebar modules each role may open. */
 export const ROLE_MODULE_KEYS: Record<UserRole, NavKey[]> = {
@@ -106,11 +107,63 @@ export const ROLE_DENIED_CHILDREN: Partial<Record<UserRole, NavKey[]>> = {
   ],
 };
 
-export function canRoleManageUsers(role: UserRole) {
-  return role === 'admin' || role === 'manager';
+export function canRoleManageUsers(role: string) {
+  return role === 'admin';
 }
 
-export function childPagesForRole(role: UserRole): NavKey[] {
+export function canRoleManageRoles(role: string) {
+  return role === 'admin';
+}
+
+function findCustomRole(role: string, customRoles?: CustomRole[]) {
+  return customRoles?.find((r) => r.id === role);
+}
+
+export function moduleKeysForRole(role: string, customRoles?: CustomRole[]): NavKey[] {
+  if (role === 'admin') return ROLE_MODULE_KEYS.admin;
+  const custom = findCustomRole(role, customRoles);
+  if (custom) return custom.moduleKeys;
+  if (role in ROLE_MODULE_KEYS) return ROLE_MODULE_KEYS[role as UserRole];
+  return ROLE_MODULE_KEYS.user;
+}
+
+export function deniedChildrenForRole(role: string, customRoles?: CustomRole[]): NavKey[] {
+  if (role === 'admin') return [];
+  const custom = findCustomRole(role, customRoles);
+  if (custom) return custom.deniedChildren;
+  return ROLE_DENIED_CHILDREN[role as UserRole] ?? [];
+}
+
+export function settingsKeysForRole(role: string): NavKey[] {
+  if (role === 'admin') return ROLE_SETTINGS_KEYS.admin;
+  if (role in ROLE_SETTINGS_KEYS) return ROLE_SETTINGS_KEYS[role as UserRole];
+  return ['settingsHome'];
+}
+
+export function childPagesForRole(role: string, customRoles?: CustomRole[]): NavKey[] {
+  const allowedTop = new Set(moduleKeysForRole(role, customRoles));
+  const denied = new Set(deniedChildrenForRole(role, customRoles));
+  const pages: NavKey[] = [];
+
+  for (const mod of navModules) {
+    if (!allowedTop.has(mod.key)) continue;
+    if (mod.children?.length) {
+      for (const child of mod.children) {
+        if (!denied.has(child.key)) pages.push(child.key);
+      }
+    } else if (!denied.has(mod.key)) {
+      pages.push(mod.key);
+    }
+  }
+
+  for (const key of settingsKeysForRole(role)) {
+    if (!denied.has(key) && !pages.includes(key)) pages.push(key);
+  }
+
+  return pages;
+}
+
+export function childPagesForRoleLegacy(role: UserRole): NavKey[] {
   const allowedTop = new Set(ROLE_MODULE_KEYS[role]);
   const denied = new Set(ROLE_DENIED_CHILDREN[role] ?? []);
   const pages: NavKey[] = [];
@@ -175,7 +228,7 @@ export function describeCompanyScope(
 }
 
 export type UserAccessSummary = {
-  role: UserRole;
+  role: string;
   roleTitle: string;
   companyAccess: CompanyAccess;
   companyTitle: string;
@@ -185,26 +238,39 @@ export type UserAccessSummary = {
   settingsKeys: NavKey[];
   canManageUsers: boolean;
   canViewProfitLoss: boolean;
+  companyNetworkOnly?: boolean;
+  blockMobile?: boolean;
 };
 
 export function buildUserAccessSummary(
-  role: UserRole,
+  role: string,
   companyAccess: CompanyAccess,
   locale: 'fa' | 'en',
-  profitLossRoles?: UserRole[]
+  profitLossRoles?: UserRole[],
+  customRoles?: CustomRole[]
 ): UserAccessSummary {
   const roleDef = systemRoles.find((r) => r.key === role);
+  const custom = findCustomRole(role, customRoles);
   const scope = describeCompanyScope(companyAccess, locale);
+  const pnl =
+    role === 'admin' ||
+    custom?.profitLoss === true ||
+    canViewProfitLoss(role as UserRole, profitLossRoles);
+
   return {
     role,
-    roleTitle: roleDef ? (locale === 'fa' ? roleDef.titleFa : roleDef.titleEn) : role,
+    roleTitle:
+      custom?.name ??
+      (roleDef ? (locale === 'fa' ? roleDef.titleFa : roleDef.titleEn) : role),
     companyAccess,
     companyTitle: scope.title,
     companyDetail: scope.detail,
-    moduleKeys: ROLE_MODULE_KEYS[role],
-    pageKeys: childPagesForRole(role),
-    settingsKeys: ROLE_SETTINGS_KEYS[role],
+    moduleKeys: moduleKeysForRole(role, customRoles),
+    pageKeys: childPagesForRole(role, customRoles),
+    settingsKeys: settingsKeysForRole(role),
     canManageUsers: canRoleManageUsers(role),
-    canViewProfitLoss: canViewProfitLoss(role, profitLossRoles),
+    canViewProfitLoss: pnl,
+    companyNetworkOnly: custom?.companyNetworkOnly,
+    blockMobile: custom?.blockMobile,
   };
 }

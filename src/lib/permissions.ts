@@ -36,10 +36,10 @@ export function canGrantProfitLoss(role: UserRole) {
   return role === 'admin';
 }
 
-export function canViewProfitLoss(role: UserRole, allowed?: UserRole[]) {
+export function canViewProfitLoss(role: string, allowed?: UserRole[]) {
   if (role === 'admin') return true;
   const list = allowed ?? DEFAULT_PNL_ROLES;
-  return list.includes(role);
+  return list.includes(role as UserRole);
 }
 
 export function isContractOpenForExpenses(status?: string) {

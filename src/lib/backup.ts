@@ -4,6 +4,7 @@ export const ERP_STORAGE_KEYS = [
   'erp-ui-prefs',
   'erp-company-filter',
   'erp-feature-perms-v1',
+  'erp-custom-roles-v1',
 ] as const;
 
 export type BackupPayload = {

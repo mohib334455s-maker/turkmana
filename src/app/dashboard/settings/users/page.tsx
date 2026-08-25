@@ -1,78 +1,43 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 import { LocalizedCrud } from '@/components/shared/localized-crud';
-import { UserAccessCard } from '@/components/settings/user-access-panel';
+import { ActiveSessionsPanel } from '@/components/settings/active-sessions-panel';
 import { Card, CardContent } from '@/components/ui/card';
 import { modules } from '@/lib/modules/catalog';
 import { useI18n } from '@/lib/i18n/store';
-import { asCompanyAccess, type CompanyAccess } from '@/lib/company-access';
-import type { UserRole } from '@/lib/auth-store';
-
-const demoUsers: Array<{
-  id: number;
-  email: string;
-  fullName: string;
-  role: UserRole;
-  companyAccess: CompanyAccess;
-}> = [
-  {
-    id: 1,
-    email: 'turkman',
-    fullName: 'System Admin',
-    role: 'admin',
-    companyAccess: 'both',
-  },
-  {
-    id: 2,
-    email: 'arya.manager',
-    fullName: 'Arya Operations Manager',
-    role: 'manager',
-    companyAccess: 'arya',
-  },
-  {
-    id: 3,
-    email: 'turkmen.accountant',
-    fullName: 'Turkmen Accountant',
-    role: 'accountant',
-    companyAccess: 'turkmen',
-  },
-  {
-    id: 4,
-    email: 'warehouse.ops',
-    fullName: 'Warehouse Keeper',
-    role: 'warehouse',
-    companyAccess: 'turkmen',
-  },
-  {
-    id: 5,
-    email: 'sales.arya',
-    fullName: 'Arya Sales',
-    role: 'sales',
-    companyAccess: 'arya',
-  },
-];
+import { useAuthStore } from '@/lib/auth-store';
+import { useCustomRolesStore } from '@/lib/custom-roles-store';
+import { systemRoles } from '@/lib/roles';
+import type { CrudModuleConfig } from '@/components/shared/crud-page';
 
 export default function UsersSettingsPage() {
   const { t, tx } = useI18n();
+  const role = useAuthStore((s) => s.role);
+  const isAdmin = role === 'admin';
+  const customRoles = useCustomRolesStore((s) => s.roles);
+
+  const usersModule = useMemo((): CrudModuleConfig => {
+    const base = modules.users;
+    const roleOptions = [
+      { value: 'admin', label: 'مدیر سیستم|System admin' },
+      ...systemRoles
+        .filter((r) => r.key !== 'admin')
+        .map((r) => ({ value: r.key, label: `${r.titleFa}|${r.titleEn}` })),
+      ...customRoles.map((r) => ({ value: r.id, label: `${r.name}|${r.name}` })),
+    ];
+
+    return {
+      ...base,
+      fields: base.fields.map((f) =>
+        f.key === 'role' ? { ...f, options: roleOptions } : f
+      ),
+    };
+  }, [customRoles]);
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <section>
-        <h2 className="text-base font-extrabold text-slate-900">{t('userAccessTitle')}</h2>
-        <p className="mt-1 text-sm text-slate-500">{t('userAccessDesc')}</p>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {demoUsers.map((user) => (
-            <UserAccessCard
-              key={user.id}
-              role={user.role}
-              companyAccess={user.companyAccess}
-              title={user.fullName}
-              subtitle={`${user.email} · ${asCompanyAccess(user.companyAccess)}`}
-            />
-          ))}
-        </div>
-      </section>
+      {isAdmin ? <ActiveSessionsPanel /> : null}
 
       <Card className="border-slate-200 shadow-none">
         <CardContent className="p-5">
@@ -81,15 +46,15 @@ export default function UsersSettingsPage() {
           </p>
           <p className="mt-1 text-xs text-slate-500">
             {tx(
-              'نقش و دسترسی شرکت هر کاربر را در فرم زیر تنظیم کنید.',
-              'Set each user role and company access in the form below.'
+              'کاربر جدید بسازید، نقش سفارشی یا ادمین بدهید، و دسترسی شرکت را تنظیم کنید.',
+              'Create users, assign custom or admin roles, and set company access.'
             )}
           </p>
         </CardContent>
       </Card>
 
       <Suspense fallback={<div className="p-8 text-sm text-slate-500">{t('loading')}</div>}>
-        <LocalizedCrud {...modules.users} />
+        <LocalizedCrud {...usersModule} />
       </Suspense>
     </div>
   );

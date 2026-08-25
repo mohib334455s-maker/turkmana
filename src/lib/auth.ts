@@ -8,6 +8,10 @@ export interface JWTPayload {
   email: string;
   role?: string;
   companyAccess?: string;
+  sessionId?: string;
+  companyNetworkOnly?: boolean;
+  blockMobile?: boolean;
+  allowedCidrs?: string[];
 }
 
 export async function hashPassword(password: string): Promise<string> {

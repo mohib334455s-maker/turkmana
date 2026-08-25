@@ -10,7 +10,8 @@ export type UserRole =
   | 'accountant'
   | 'warehouse'
   | 'sales'
-  | 'user';
+  | 'user'
+  | (string & {});
 
 type AuthState = {
   role: UserRole;
@@ -27,15 +28,8 @@ type AuthState = {
 };
 
 function asRole(value?: string): UserRole {
-  const allowed: UserRole[] = [
-    'admin',
-    'manager',
-    'accountant',
-    'warehouse',
-    'sales',
-    'user',
-  ];
-  return allowed.includes(value as UserRole) ? (value as UserRole) : 'user';
+  if (!value || !value.trim()) return 'user';
+  return value.trim();
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -62,5 +56,9 @@ export const useAuthStore = create<AuthState>()(
 );
 
 export function canManageUsers(role: UserRole) {
-  return role === 'admin' || role === 'manager';
+  return role === 'admin';
+}
+
+export function canManageRoles(role: UserRole) {
+  return role === 'admin';
 }

@@ -6,9 +6,9 @@ export const COMPANY_ACCESS_LABELS: Record<
   CompanyAccess,
   { fa: string; en: string }
 > = {
-  arya: { fa: 'فقط آریا', en: 'Arya only' },
-  turkmen: { fa: 'فقط ترکمن', en: 'Turkmen only' },
-  both: { fa: 'آریا و ترکمن (سوئیچ)', en: 'Arya & Turkmen (switch)' },
+  arya: { fa: 'فقط آزیا آریا لمتید', en: 'Azya Aria LTD only' },
+  turkmen: { fa: 'فقط ترکمن پطرولیم', en: 'Turkmen Petroleum only' },
+  both: { fa: 'آزیا آریا لمتید و ترکمن پطرولیم (سوئیچ)', en: 'Azya Aria LTD & Turkmen Petroleum (switch)' },
 };
 
 export function asCompanyAccess(value?: string): CompanyAccess {

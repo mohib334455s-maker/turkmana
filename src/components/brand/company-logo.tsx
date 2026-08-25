@@ -16,14 +16,14 @@ const SIZE: Record<Size, { box: string; text: string }> = {
   sm: { box: 'h-10 w-10', text: 'text-xs' },
   md: { box: 'h-12 w-12', text: 'text-sm' },
   lg: { box: 'h-16 w-16', text: 'text-base' },
-  xl: { box: 'h-20 w-20', text: 'text-lg' },
+  xl: { box: 'h-[5.5rem] w-[5.5rem]', text: 'text-lg' },
 };
 
 const ARYA_SIZE: Record<Size, string> = {
-  sm: 'h-10 w-[4.25rem]',
-  md: 'h-12 w-24',
-  lg: 'h-16 w-32',
-  xl: 'h-20 w-40',
+  sm: 'h-10 w-[4.5rem]',
+  md: 'h-12 w-28',
+  lg: 'h-16 w-36',
+  xl: 'h-[5.5rem] w-[11rem]',
 };
 
 function LogoImage({
@@ -81,14 +81,14 @@ export function CompanyLogo({
       {resolved === 'arya' ? (
         <LogoImage
           src={ARYA_LOGO_SRC}
-          alt={locale === 'en' ? 'Azya Aria Ltd' : 'آزیا آریا لمتید'}
+          alt={locale === 'en' ? 'Azya Aria LTD' : 'آزیا آریا لمتید'}
           box={ARYA_SIZE[size]}
           dark={dark}
         />
       ) : resolved === 'turkmen' ? (
         <LogoImage
           src={TURKMEN_LOGO_SRC}
-          alt={locale === 'en' ? 'Turkmen' : 'ترکمن'}
+          alt={locale === 'en' ? 'Turkmen Petroleum Company' : 'ترکمن پطرولیم'}
           box={s.box}
           dark={dark}
         />

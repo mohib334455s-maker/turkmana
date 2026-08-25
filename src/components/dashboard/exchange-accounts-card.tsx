@@ -43,7 +43,7 @@ export function ExchangeAccountsCard() {
                 </h3>
                 <p className="mt-1 text-sm text-sky-100/85">
                   {tx(
-                    'طلب بالای صرافی و باقیات — جداگانه',
+                    'طلب بالای صرافی و باقی — جداگانه',
                     'Claims and dues — tracked separately'
                   )}
                 </p>
@@ -70,7 +70,7 @@ export function ExchangeAccountsCard() {
             </div>
             <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
               <p className="text-[11px] font-medium uppercase tracking-wide text-rose-100">
-                {tx('جمله باقیات', 'Total dues')}
+                {tx('جمله باقی', 'Total dues')}
               </p>
               <p className="mt-1 text-lg font-extrabold num text-white sm:text-xl">
                 {formatCurrency(summary.dueFromExchangers)}
@@ -146,7 +146,7 @@ export function ExchangeAccountsCard() {
                       </div>
                       <div className="rounded-xl bg-rose-50/80 px-3 py-2.5">
                         <p className="text-[10px] font-semibold text-rose-600">
-                          {tx('باقیات', 'Due')}
+                          {tx('باقی', 'Due')}
                         </p>
                         <p
                           className={cn(

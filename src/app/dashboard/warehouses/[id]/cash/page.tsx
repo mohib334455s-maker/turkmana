@@ -94,7 +94,7 @@ export default function StorageCashPage({
           <>
             <Button type="button" size="sm" variant="secondary" onClick={() => setRentOpen(true)}>
               <Train className="ml-2 h-4 w-4" />
-              {tx('شروع کرایه واگن', 'Start wagon rent')}
+              {tx('شروع سنجش کرایه ذخیره', 'Start storage rent')}
             </Button>
             <Button type="button" size="sm" onClick={() => setCashOpen(true)}>
               <Plus className="ml-2 h-4 w-4" />
@@ -106,13 +106,13 @@ export default function StorageCashPage({
 
       <Card className="overflow-hidden rounded-[22px] border-amber-200 bg-amber-50/40">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{tx('کرایه روزانه واگن', 'Daily wagon rent')}</CardTitle>
+          <CardTitle className="text-base">{tx('پرداخت و سنجش کرایه ذخیره', 'Storage rent assessment')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 pb-4">
           <p className="text-sm leading-relaxed text-slate-600">
             {tx(
-              'واگن از روز ورود تا تاریخ ختم کرایه می‌خورد. روزهای رایگان کم می‌شود، بعد تعداد واگن × روز × نرخ روزانه. تا وقتی ختم نزنید، مبلغ تا امروز جمع می‌شود.',
-              'Wagons accrue rent from arrival until the rent-end date. After free days: wagons × days × daily rate. While open, the amount grows through today.'
+              'کرایه ذخیره از روز ورود تا تاریخ ختم محاسبه می‌شود. روزهای رایگان کم می‌شود، بعد تعداد واحد × روز × نرخ روزانه. تا وقتی ختم نزنید، مبلغ تا امروز جمع می‌شود.',
+              'Storage rent accrues from arrival until the rent-end date. After free days: units × days × daily rate. While open, the amount grows through today.'
             )}
           </p>
           <p className="text-sm font-semibold">
@@ -120,14 +120,14 @@ export default function StorageCashPage({
             <span className="num">{formatCurrency(openAccrued)}</span>
           </p>
           {openStays.length === 0 ? (
-            <p className="text-sm text-slate-500">{tx('واگن بازی در این ذخیره نیست.', 'No open wagon stays here.')}</p>
+            <p className="text-sm text-slate-500">{tx('کرایه بازی در این ذخیره نیست.', 'No open rent stays here.')}</p>
           ) : (
             <div className="table-scroll">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{tx('شروع', 'Start')}</TableHead>
-                    <TableHead>{tx('واگن', 'Wagons')}</TableHead>
+                    <TableHead>{tx('واحد', 'Units')}</TableHead>
                     <TableHead>{tx('نرخ روزانه', 'Daily rate')}</TableHead>
                     <TableHead>{tx('روز قابل‌کرایه', 'Billable days')}</TableHead>
                     <TableHead>{tx('طلب تا امروز', 'Accrued')}</TableHead>
@@ -286,16 +286,16 @@ export default function StorageCashPage({
       <CompactFormDialog
         open={rentOpen}
         onClose={() => setRentOpen(false)}
-        title={tx('شروع کرایه واگن', 'Start wagon rent')}
+        title={tx('شروع سنجش کرایه ذخیره', 'Start storage rent')}
         description={tx(
-          'از این تاریخ واگن‌ها روزانه کرایه می‌خورند تا وقتی ختم بزنید و به حساب نقدی ثبت شود.',
-          'From this date wagons accrue daily rent until you close the stay and post it to cash.'
+          'از این تاریخ کرایه ذخیره روزانه محاسبه می‌شود تا وقتی ختم بزنید و به حساب نقدی ثبت شود.',
+          'From this date storage rent accrues daily until you close the stay and post it to cash.'
         )}
         size="lg"
         fields={[
           { key: 'date', label: tx('تاریخ شروع', 'Start date'), type: 'date', required: true },
-          { key: 'wagons', label: tx('تعداد واگن', 'Wagons'), type: 'number', required: true },
-          { key: 'dailyRatePerWagon', label: tx('کرایه روزانه فی واگن (دالر)', 'Daily rate per wagon (USD)'), type: 'number', required: true },
+          { key: 'wagons', label: tx('تعداد واحد', 'Units'), type: 'number', required: true },
+          { key: 'dailyRatePerWagon', label: tx('کرایه روزانه فی واحد (دالر)', 'Daily rate per unit (USD)'), type: 'number', required: true },
           { key: 'freeDays', label: tx('روز رایگان', 'Free days'), type: 'number' },
           { key: 'qty', label: tx('وزن / مقدار', 'Weight / qty'), type: 'number' },
           { key: 'dailyRatePerTon', label: tx('نرخ روزانه فی تن (اختیاری)', 'Daily rate per ton (optional)'), type: 'number' },
@@ -353,7 +353,7 @@ export default function StorageCashPage({
           <div className="relative z-10 w-full max-w-md rounded-2xl border bg-white p-5 shadow-xl">
             <h3 className="text-lg font-bold">{tx('ختم کرایه و ثبت نقدی', 'Close rent and post cash')}</h3>
             <p className="mt-2 text-sm text-slate-600">
-              {settleStay.wagons} {tx('واگن', 'wagons')} · {settleStay.productType}
+              {settleStay.wagons} {tx('واحد', 'units')} · {settleStay.productType}
             </p>
             <div className="mt-3 space-y-1.5">
               <Label>{tx('تاریخ ختم کرایه', 'Rent end date')}</Label>

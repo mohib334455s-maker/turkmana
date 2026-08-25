@@ -92,7 +92,7 @@ body {
 
 .table-scroll table {
   width: 100%;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .table-scroll thead th {

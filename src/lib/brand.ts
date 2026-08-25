@@ -14,8 +14,9 @@ export function isTurkmenCompany(company?: BrandCompany | null) {
 }
 
 export function companyBrandName(company?: BrandCompany | null, locale: 'fa' | 'en' = 'fa') {
-  if (company === 'arya') return locale === 'en' ? 'Azya Aria Ltd' : 'شرکت آزیا آریا لمتید';
-  if (company === 'turkmen') return locale === 'en' ? 'Turkmen' : 'ترکمن';
+  if (company === 'arya') return locale === 'en' ? 'Azya Aria LTD' : 'آزیا آریا لمتید';
+  if (company === 'turkmen')
+    return locale === 'en' ? 'Turkmen Petroleum Company' : 'ترکمن پطرولیم';
   return locale === 'en' ? 'Company' : 'شرکت';
 }
 

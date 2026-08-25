@@ -2,8 +2,8 @@ import type { CrudModuleConfig, FieldDef, StatusMeta } from '@/components/shared
 import { demoRows } from '@/lib/modules/demo-rows';
 
 const companyOptions = [
-  { value: 'arya', label: 'آزیا آریا لمتید|Azya Aria Ltd' },
-  { value: 'turkmen', label: 'ترکمن|Turkmen' },
+  { value: 'arya', label: 'آزیا آریا لمتید|Azya Aria LTD' },
+  { value: 'turkmen', label: 'ترکمن پطرولیم|Turkmen Petroleum Company' },
 ];
 
 const docStatus: Record<string, StatusMeta> = {
@@ -890,9 +890,9 @@ export const modules = {
         label: 'دسترسی شرکت|Company access',
         type: 'select' as const,
         options: [
-          { value: 'arya', label: 'فقط آریا|Arya only' },
-          { value: 'turkmen', label: 'فقط ترکمن|Turkmen only' },
-          { value: 'both', label: 'آریا و ترکمن (سوئیچ)|Arya & Turkmen (switch)' },
+          { value: 'arya', label: 'فقط آزیا آریا لمتید|Azya Aria LTD only' },
+          { value: 'turkmen', label: 'فقط ترکمن پطرولیم|Turkmen Petroleum only' },
+          { value: 'both', label: 'آزیا آریا لمتید و ترکمن پطرولیم (سوئیچ)|Azya Aria LTD & Turkmen Petroleum (switch)' },
         ],
         required: true,
         list: true,

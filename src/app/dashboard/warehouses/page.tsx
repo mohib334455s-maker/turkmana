@@ -62,8 +62,8 @@ export default function WarehousesPage() {
         title={t('pageWarehouses')}
         description={
           locale === 'en'
-            ? 'Each storage account has a goods ledger (unload/load) and a cash ledger (payments and daily wagon rent).'
-            : 'هر ذخیره دو حساب دارد: جنسی (تخلیه و بارگیری) و نقدی (پرداخت و کرایه روزانه واگن).'
+            ? 'Each storage has a goods ledger (unload/load) and a cash ledger (payments and storage rent assessment).'
+            : 'هر ذخیره دو حساب دارد: جنسی (تخلیه و بارگیری) و نقدی (پرداخت و سنجش کرایه ذخیره).'
         }
         actions={
           <>
@@ -96,7 +96,7 @@ export default function WarehousesPage() {
             </span>
             <div>
               <p className="text-xs text-slate-500">
-                {locale === 'en' ? 'Warehouses' : 'تعداد انبار'}
+                {locale === 'en' ? 'Storage sites' : 'تعداد ذخیره'}
               </p>
               <p className="text-xl font-bold num">{enriched.length}</p>
             </div>
@@ -142,7 +142,7 @@ export default function WarehousesPage() {
                     <TableRow>
                       <TableHead>{locale === 'en' ? 'No.' : 'شماره'}</TableHead>
                       <TableHead>{locale === 'en' ? 'Account' : 'طرف حساب'}</TableHead>
-                      <TableHead>{locale === 'en' ? 'Category' : 'کتگوری'}</TableHead>
+                      <TableHead>{locale === 'en' ? 'Type' : 'نوع'}</TableHead>
                       <TableHead className="text-center">{t('colActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -169,10 +169,10 @@ export default function WarehousesPage() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="muted">{locale === 'en' ? 'Storage' : 'ذخیره'}</Badge>
+                          <Badge variant="muted">{w.type || (locale === 'en' ? 'Storage' : 'ذخیره')}</Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex justify-end gap-1">
+                          <div className="flex justify-center gap-1">
                             <Link href={`/dashboard/warehouses/${w.id}`}>
                               <Button size="icon" variant="ghost" title={t('details')}>
                                 <Eye className="h-4 w-4" />
@@ -204,7 +204,7 @@ export default function WarehousesPage() {
                     key={w.id}
                     title={w.name}
                     subtitle={w.location}
-                    badge={<Badge variant="muted">{locale === 'en' ? 'Storage' : 'ذخیره'}</Badge>}
+                    badge={<Badge variant="muted">{w.type || (locale === 'en' ? 'Storage' : 'ذخیره')}</Badge>}
                     metrics={[
                       { label: locale === 'en' ? 'Qty' : 'موجودی', value: formatNumber(w.totalQty, 0) },
                       { label: locale === 'en' ? 'Contracts' : 'قرارداد', value: String(w.contracts) },
@@ -238,10 +238,18 @@ export default function WarehousesPage() {
             label: locale === 'en' ? 'Type' : 'نوع',
             type: 'select',
             options: [
-              { value: 'عمومی', label: locale === 'en' ? 'General' : 'عمومی' },
-              { value: 'سوخت', label: locale === 'en' ? 'Fuel' : 'سوخت' },
-              { value: 'خشک', label: locale === 'en' ? 'Dry goods' : 'خشک' },
-              { value: 'ترانزیت', label: locale === 'en' ? 'Transit' : 'ترانزیت' },
+              { value: 'مواد ارتزاقی', label: locale === 'en' ? 'Foodstuffs' : 'مواد ارتزاقی' },
+              { value: 'تیل', label: locale === 'en' ? 'Oil / fuel' : 'تیل' },
+              { value: 'گاز', label: locale === 'en' ? 'Gas' : 'گاز' },
+              {
+                value: 'کود کیمیاوی',
+                label: locale === 'en' ? 'Chemical fertilizer' : 'کود کیمیاوی',
+              },
+              {
+                value: 'مواد ساختمانی',
+                label: locale === 'en' ? 'Building materials' : 'مواد ساختمانی',
+              },
+              { value: 'فلزات', label: locale === 'en' ? 'Metals' : 'فلزات' },
             ],
           },
           {
@@ -261,7 +269,7 @@ export default function WarehousesPage() {
           addWarehouse({
             name: v.name.trim(),
             location: v.location.trim(),
-            type: v.type || 'عمومی',
+            type: v.type || 'مواد ارتزاقی',
             company: (v.company as CompanyKey) || 'arya',
             capacity: Number(v.capacity || 0),
             notes: v.notes || '',

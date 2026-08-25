@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-/** Dense RTL tables — fit container; parent may use `.table-scroll` if still wide */
+/** Dense RTL tables — fixed layout keeps headers aligned with cells */
 export function Table({
   className,
   ...props
@@ -9,7 +9,7 @@ export function Table({
   return (
     <table
       className={cn(
-        'w-full caption-bottom border-collapse text-[11px] leading-snug sm:text-xs',
+        'w-full table-fixed caption-bottom border-collapse text-[11px] leading-snug sm:text-xs',
         className
       )}
       {...props}
@@ -55,7 +55,7 @@ export function TableHead({
   return (
     <th
       className={cn(
-        'h-9 whitespace-nowrap px-2 text-start align-middle text-[10px] font-bold text-slate-600 sm:px-3 sm:text-[11px]',
+        'h-9 whitespace-nowrap px-2 text-center align-middle text-[10px] font-bold text-slate-600 sm:px-3 sm:text-[11px]',
         className
       )}
       {...props}
@@ -70,7 +70,7 @@ export function TableCell({
   return (
     <td
       className={cn(
-        'max-w-[12rem] truncate px-2 py-2 text-start align-middle text-slate-800 sm:max-w-[14rem] sm:px-3',
+        'px-2 py-2 text-center align-middle text-slate-800 sm:px-3',
         className
       )}
       {...props}

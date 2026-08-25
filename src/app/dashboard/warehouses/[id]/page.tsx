@@ -59,8 +59,8 @@ export default function StorageChoicePage({
       <PageHeader
         title={warehouse.name}
         description={tx(
-          'این ذخیره دو حساب جدا دارد: جنسی (تخلیه و بارگیری) و نقدی (پرداخت، طلب و کرایه واگن).',
-          'This depot has two ledgers: goods (unload/load) and cash (payments, claims, wagon rent).'
+          'این ذخیره دو حساب جدا دارد: جنسی (تخلیه و بارگیری) و نقدی (پرداخت و سنجش کرایه ذخیره).',
+          'This depot has two ledgers: goods (unload/load) and cash (payments and storage rent assessment).'
         )}
         actions={
           <Link href="/dashboard/warehouses">

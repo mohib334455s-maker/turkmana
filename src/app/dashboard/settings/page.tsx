@@ -32,6 +32,7 @@ import {
   estimateBackupSizeKb,
   restoreBackup,
 } from '@/lib/backup';
+import { downloadExcelTemplate, importExcelFile } from '@/lib/excel-import';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
 import { useCompanyStore, type CompanyFilter } from '@/lib/company-store';
 import { UserAccessCard } from '@/components/settings/user-access-panel';
@@ -68,6 +69,7 @@ export default function SettingsPage() {
     return localStorage.getItem('erp-last-backup-at');
   });
   const fileRef = useRef<HTMLInputElement>(null);
+  const excelRef = useRef<HTMLInputElement>(null);
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
 
   const showToast = (msg: string) => {
@@ -137,6 +139,16 @@ export default function SettingsPage() {
       window.setTimeout(() => window.location.reload(), 1200);
     };
     reader.readAsText(file);
+  };
+
+  const handleExcelImport = async (file: File) => {
+    const result = await importExcelFile(file);
+    if (!result.ok) {
+      showToast(t('excelImportError'));
+      return;
+    }
+    showToast(t('excelImportSuccess'));
+    window.setTimeout(() => window.location.reload(), 1200);
   };
 
   const handleClear = () => {
@@ -285,7 +297,7 @@ export default function SettingsPage() {
           <h2 className="text-base font-extrabold text-slate-900">{t('settingsData')}</h2>
           <p className="mt-0.5 text-sm text-slate-500">{t('settingsDataDesc')}</p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
           <Card className="rounded-2xl border-slate-200 shadow-none">
             <CardContent className="p-5">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
@@ -326,6 +338,37 @@ export default function SettingsPage() {
                 <Upload className="ms-2 h-4 w-4" />
                 {t('backupImport')}
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-teal-100 shadow-none">
+            <CardContent className="p-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                <Database className="h-5 w-5" />
+              </div>
+              <h3 className="mt-4 text-sm font-extrabold text-slate-900">{t('excelImport')}</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{t('excelImportHint')}</p>
+              <input
+                ref={excelRef}
+                type="file"
+                accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleExcelImport(file);
+                  e.target.value = '';
+                }}
+              />
+              <div className="mt-4 grid gap-2">
+                <Button variant="outline" className="w-full" onClick={() => downloadExcelTemplate()}>
+                  <Download className="ms-2 h-4 w-4" />
+                  {t('excelTemplate')}
+                </Button>
+                <Button className="w-full" variant="outline" onClick={() => excelRef.current?.click()}>
+                  <Upload className="ms-2 h-4 w-4" />
+                  {t('excelImport')}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

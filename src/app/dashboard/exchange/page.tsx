@@ -93,7 +93,7 @@ export default function ExchangePage() {
   };
 
   const houseActions = (house: ExchangeHouse) => (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex items-center justify-center gap-1">
       <Link href={`/dashboard/exchange/${house.id}`}>
         <Button size="icon" variant="ghost" title={t('details')}>
           <Eye className="h-4 w-4" />
@@ -113,21 +113,21 @@ export default function ExchangePage() {
 
   const renderHouseRow = (house: ExchangeHouse, index?: number) => (
     <TableRow key={house.id} className={house.kind === 'joint' ? 'bg-amber-50/70' : undefined}>
-      <TableCell className="num w-14 font-medium text-slate-500">
+      <TableCell className="num w-[8%] font-medium text-slate-500">
         {index != null ? index + 1 : '—'}
       </TableCell>
-      <TableCell className="max-w-none font-semibold">
+      <TableCell className="w-[34%] break-words font-semibold">
         <Link href={`/dashboard/exchange/${house.id}`} className="hover:text-teal-700">
           {displayName(house)}
         </Link>
         {house.phone ? (
-          <p className="mt-0.5 flex items-center gap-1 text-[11px] font-normal text-slate-500">
+          <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-normal text-slate-500">
             <Phone className="h-3 w-3" />
             <span className="num">{house.phone}</span>
           </p>
         ) : null}
       </TableCell>
-      <TableCell>
+      <TableCell className="w-[14%]">
         <Badge
           variant={
             house.kind === 'joint' ? 'warning' : house.kind === 'treasury' ? 'info' : 'muted'
@@ -136,11 +136,11 @@ export default function ExchangePage() {
           {kindLabel(house.kind, locale)}
         </Badge>
       </TableCell>
-      <TableCell className="num font-medium">{house.currency}</TableCell>
-      <TableCell className={cn('num font-semibold', balanceClass(house.balance))}>
+      <TableCell className="num w-[12%] font-medium">{house.currency}</TableCell>
+      <TableCell className={cn('num w-[16%] font-semibold', balanceClass(house.balance))}>
         {formatCurrency(house.balance)}
       </TableCell>
-      <TableCell className="w-24">{houseActions(house)}</TableCell>
+      <TableCell className="w-[16%]">{houseActions(house)}</TableCell>
     </TableRow>
   );
 
@@ -230,7 +230,7 @@ export default function ExchangePage() {
       <PageHeader
         title={t('pageExchange')}
         description={tx(
-          'حساب‌های نقدی صرافی — طلب بالای صرافی و باقیات از صرافی جدا گزارش می‌شود.',
+          'حساب‌های نقدی صرافی — طلب بالای صرافی و باقی از صرافی جدا گزارش می‌شود.',
           'Cash accounts with exchangers — claims and dues are reported separately.'
         )}
         actions={
@@ -279,11 +279,11 @@ export default function ExchangePage() {
         <Card className="overflow-hidden rounded-[22px] border-rose-200 bg-rose-50/50">
           <CardContent className="p-5">
             <p className="text-sm font-bold text-rose-900">
-              {tx('جمله باقیات از صرافی‌ها', 'Total dues from exchangers')}
+              {tx('جمله باقی از صرافی‌ها', 'Total dues from exchangers')}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-rose-800/80">
               {tx(
-                'باقیات / بدهی طرف ما نسبت به صرافی (بیلانس منفی).',
+                'باقی / بدهی طرف ما نسبت به صرافی (بیلانس منفی).',
                 'Amounts still due to exchangers (negative balance).'
               )}
             </p>
@@ -306,12 +306,12 @@ export default function ExchangePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-14">{tx('شماره', 'No.')}</TableHead>
-                    <TableHead>{tx('طرف حساب', 'Account')}</TableHead>
-                    <TableHead>{tx('نوع', 'Kind')}</TableHead>
-                    <TableHead>{tx('ارز', 'Currency')}</TableHead>
-                    <TableHead>{tx('بیلانس', 'Balance')}</TableHead>
-                    <TableHead className="w-24 text-end">{t('colActions')}</TableHead>
+                    <TableHead className="w-[8%]">{tx('شماره', 'No.')}</TableHead>
+                    <TableHead className="w-[34%]">{tx('طرف حساب', 'Account')}</TableHead>
+                    <TableHead className="w-[14%]">{tx('نوع', 'Kind')}</TableHead>
+                    <TableHead className="w-[12%]">{tx('ارز', 'Currency')}</TableHead>
+                    <TableHead className="w-[16%]">{tx('بیلانس', 'Balance')}</TableHead>
+                    <TableHead className="w-[16%]">{t('colActions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -336,7 +336,7 @@ export default function ExchangePage() {
                     'emerald'
                   )}
                   {summaryRow(
-                    tx('جمله باقیات از صرافی‌ها', 'Total dues from exchangers'),
+                    tx('جمله باقی از صرافی‌ها', 'Total dues from exchangers'),
                     summary.dueFromExchangers,
                     'rose'
                   )}
@@ -384,7 +384,7 @@ export default function ExchangePage() {
                     <span className="num font-bold">{formatCurrency(summary.claimsOnExchangers)}</span>
                   </div>
                   <div className="flex justify-between gap-3 text-rose-800">
-                    <span>{tx('جمله باقیات از صرافی‌ها', 'Total dues')}</span>
+                    <span>{tx('جمله باقی از صرافی‌ها', 'Total dues')}</span>
                     <span className="num font-bold">{formatCurrency(summary.dueFromExchangers)}</span>
                   </div>
                   <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 font-bold">
@@ -402,7 +402,7 @@ export default function ExchangePage() {
 
       <p className="text-sm leading-relaxed text-slate-500">
         {tx(
-          'توجه: «طلب بالای صرافی» و «باقیات از صرافی» دو راپور جدا هستند و با هم جمع نمی‌شوند.',
+          'توجه: «طلب بالای صرافی» و «باقی از صرافی» دو راپور جدا هستند و با هم جمع نمی‌شوند.',
           'Note: claims and dues are two separate reports and are not summed together.'
         )}
       </p>

@@ -145,7 +145,7 @@ export function describeCompanyScope(
     return locale === 'fa'
       ? {
           title: 'فقط آزیا آریا لمتید',
-          detail: 'داده، لوگو، قرارداد و معاملات فقط شرکت آریا — بدون سوئیچ ترکمن',
+          detail: 'داده، لوگو، قرارداد و معاملات فقط شرکت آزیا آریا لمتید — بدون سوئیچ ترکمن پطرولیم',
         }
       : {
           title: 'Azya Aria Ltd only',
@@ -155,8 +155,8 @@ export function describeCompanyScope(
   if (access === 'turkmen') {
     return locale === 'fa'
       ? {
-          title: 'فقط ترکمن',
-          detail: 'داده، لوگو، قرارداد و معاملات فقط شرکت ترکمن — بدون سوئیچ آریا',
+          title: 'فقط ترکمن پطرولیم',
+          detail: 'داده، لوگو، قرارداد و معاملات فقط شرکت ترکمن پطرولیم — بدون سوئیچ آزیا آریا لمتید',
         }
       : {
           title: 'Turkmen only',
@@ -165,8 +165,8 @@ export function describeCompanyScope(
   }
   return locale === 'fa'
     ? {
-        title: 'آریا و ترکمن (سوئیچ)',
-        detail: 'می‌تواند بین آزیا آریا لمتید و ترکمن جابه‌جا شود؛ هر بار فقط یک شرکت فعال است',
+        title: 'آزیا آریا لمتید و ترکمن پطرولیم (سوئیچ)',
+        detail: 'می‌تواند بین آزیا آریا لمتید و ترکمن پطرولیم جابه‌جا شود؛ هر بار فقط یک شرکت فعال است',
       }
     : {
         title: 'Arya & Turkmen (switch)',

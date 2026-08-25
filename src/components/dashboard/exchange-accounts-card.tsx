@@ -58,8 +58,8 @@ export function ExchangeAccountsCard() {
             </Link>
           </div>
 
-          {/* Summary strip */}
-          <div className="relative mt-6 grid gap-3 sm:grid-cols-3">
+          {/* Summary strip — no exchange count */}
+          <div className="relative mt-6 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
               <p className="text-[11px] font-medium uppercase tracking-wide text-emerald-100">
                 {tx('جمله طلب', 'Total claims')}
@@ -76,14 +76,15 @@ export function ExchangeAccountsCard() {
                 {formatCurrency(summary.dueFromExchangers)}
               </p>
             </div>
-            <div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-sky-100">
-                {tx('تعداد صرافی', 'Exchange count')}
-              </p>
-              <p className="mt-1 text-lg font-extrabold num text-white sm:text-xl">
-                {summary.exchangers.length}
-              </p>
-            </div>
+          </div>
+          <div className="relative mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/dashboard/finance/banks"
+              className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25"
+            >
+              {tx('بانک‌ها', 'Banks')}
+              <Arrow className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
 

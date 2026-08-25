@@ -17,12 +17,16 @@ import {
   YAxis,
 } from 'recharts';
 import { ExchangeAccountsCard } from '@/components/dashboard/exchange-accounts-card';
+import {
+  MarketSpotCards,
+  MarketSpotHeroPanel,
+} from '@/components/dashboard/market-spot-cards';
 import { KpiCardStack } from '@/components/dashboard/kpi-card-stack';
 import { OpsModuleCard } from '@/components/dashboard/ops-module-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { useCompanyStore } from '@/lib/company-store';
-import { financialSummary, products } from '@/lib/demo-data';
+import { financialSummary } from '@/lib/demo-data';
 import { navModules } from '@/lib/navigation';
 import { formatCurrency } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n/store';
@@ -30,8 +34,6 @@ import { useAuthStore } from '@/lib/auth-store';
 import { canViewProfitLoss, usePermissionsStore } from '@/lib/permissions';
 
 const opsModules = navModules.filter((m) => m.key !== 'dashboard');
-
-const marketPrices: Array<{ code: string; name: string; buy: number; sell: number; unit: string }> = [];
 
 const monthBars: Array<{ name: string; purchase: number; sales: number }> = [];
 
@@ -43,7 +45,11 @@ export default function DashboardPage() {
   const pnlOk = canViewProfitLoss(role, profitLossRoles);
   const fin = financialSummary[company];
   const companyLabel =
-    company === 'arya' ? t('companyArya') : t('companyTurkmen');
+    company === 'arya'
+      ? t('companyArya')
+      : company === 'turkmen'
+        ? t('companyTurkmen')
+        : t('companyBoth');
 
   const kpiCards = [
     {
@@ -120,14 +126,8 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="relative min-h-[400px] overflow-hidden bg-gradient-to-br from-[#0f766e] via-[#0d9488] to-[#134e4a] xl:min-h-[420px]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_45%)]" />
-              <div className="absolute bottom-8 start-8 end-8 text-white">
-                <p className="text-sm font-semibold text-teal-50/90">{t('executiveDashboard')}</p>
-                <p className="mt-2 max-w-sm text-xs leading-6 text-teal-100/75">
-                  {t('dashboardSubtitle')}
-                </p>
-              </div>
+            <div className="relative min-h-[400px] overflow-hidden xl:min-h-[420px]">
+              <MarketSpotHeroPanel />
             </div>
           </div>
         </div>
@@ -135,6 +135,10 @@ export default function DashboardPage() {
         <div className="lg:hidden">
           <KpiCardStack items={kpiCards} />
         </div>
+      </section>
+
+      <section>
+        <MarketSpotCards />
       </section>
 
       <section>
@@ -157,46 +161,6 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-lg font-extrabold text-slate-900">{t('salesTrend')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('chartEmpty')}</p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {marketPrices
-            .filter((p) => products.some((x) => x.code === p.code))
-            .map((p) => (
-              <Card
-                key={p.code}
-                className="rounded-2xl border-slate-200 shadow-none"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-slate-900">{p.name}</p>
-                    <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                      {p.unit}
-                    </span>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div className="rounded-xl bg-rose-50/70 px-2.5 py-2">
-                      <p className="text-[10px] font-medium text-rose-500">{t('qaPurchase')}</p>
-                      <p className="mt-0.5 text-sm font-bold text-rose-700 num">
-                        {formatCurrency(p.buy)}
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-emerald-50/70 px-2.5 py-2">
-                      <p className="text-[10px] font-medium text-emerald-600">{t('qaSale')}</p>
-                      <p className="mt-0.5 text-sm font-bold text-emerald-700 num">
-                        {formatCurrency(p.sell)}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-[11px] text-slate-400">
-                    {t('colBalance')}:{' '}
-                    <span className="font-semibold text-teal-700 num">
-                      {formatCurrency(p.sell - p.buy)}
-                    </span>
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
         </div>
 
         <Card className="rounded-2xl border-slate-200 shadow-none">

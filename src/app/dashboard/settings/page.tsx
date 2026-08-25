@@ -32,12 +32,22 @@ import {
   estimateBackupSizeKb,
   restoreBackup,
 } from '@/lib/backup';
+import {
+  backupToFolder,
+  getRememberedBackupFolderName,
+  isBackupFolderSupported,
+  pickBackupFolder,
+} from '@/lib/backup-folder';
 import { downloadExcelTemplate, importExcelFile } from '@/lib/excel-import';
 import { useI18n, useUiStore } from '@/lib/i18n/store';
 import { useCompanyStore, type CompanyFilter } from '@/lib/company-store';
+import { allowedCompanyFilters } from '@/lib/company-access';
+import { CURRENCY_CATALOG } from '@/lib/currency-catalog';
+import { useCurrencyStore } from '@/lib/currency-store';
 import { UserAccessCard } from '@/components/settings/user-access-panel';
 import { canManageUsers, useAuthStore } from '@/lib/auth-store';
 import { cn } from '@/lib/utils';
+import { FolderOpen, FolderPlus } from 'lucide-react';
 
 type ModuleCard = {
   title: string;
@@ -68,9 +78,15 @@ export default function SettingsPage() {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('erp-last-backup-at');
   });
+  const [backupFolderName, setBackupFolderName] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : getRememberedBackupFolderName()
+  );
   const fileRef = useRef<HTMLInputElement>(null);
   const excelRef = useRef<HTMLInputElement>(null);
   const Arrow = dir === 'rtl' ? ArrowLeft : ArrowRight;
+  const companyChoices = allowedCompanyFilters(companyAccess);
+  const enabledCodes = useCurrencyStore((s) => s.enabledCodes);
+  const toggleCurrency = useCurrencyStore((s) => s.toggle);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -125,6 +141,32 @@ export default function SettingsPage() {
     localStorage.setItem('erp-last-backup-at', at);
     setLastBackup(at);
     showToast(t('backupSuccess'));
+  };
+
+  const handlePickFolder = async () => {
+    const result = await pickBackupFolder();
+    if (!result.ok) {
+      if (result.error !== 'cancelled') showToast(t('backupFolderUnsupported'));
+      return;
+    }
+    setBackupFolderName(result.folderName);
+    showToast(`${t('backupFolderCurrent')}: ${result.folderName}`);
+  };
+
+  const handleBackupToFolder = async () => {
+    const result = await backupToFolder();
+    if (!result.ok) {
+      if (result.error !== 'cancelled') showToast(t('backupFolderUnsupported'));
+      return;
+    }
+    localStorage.setItem('erp-last-backup-at', result.exportedAt);
+    setLastBackup(result.exportedAt);
+    if (result.method === 'folder') {
+      setBackupFolderName(result.folderName);
+      showToast(`${t('backupFolderOk')} · ${result.folderName}/${result.fileName}`);
+    } else {
+      showToast(t('backupSuccess'));
+    }
   };
 
   const handleImport = (file: File) => {
@@ -209,11 +251,18 @@ export default function SettingsPage() {
           <div>
             <Label>{t('defaultCompany')}</Label>
             <Select
-              value={company}
+              value={companyChoices.includes(company) ? company : companyChoices[0]}
               onChange={(e) => setCompany(e.target.value as CompanyFilter)}
             >
-              <option value="arya">{t('companyArya')}</option>
-              <option value="turkmen">{t('companyTurkmen')}</option>
+              {companyChoices.map((c) => (
+                <option key={c} value={c}>
+                  {c === 'arya'
+                    ? t('companyArya')
+                    : c === 'turkmen'
+                      ? t('companyTurkmen')
+                      : t('companyBoth')}
+                </option>
+              ))}
             </Select>
             <p className="mt-1.5 text-[11px] text-slate-400">{t('companyHint')}</p>
           </div>
@@ -231,10 +280,11 @@ export default function SettingsPage() {
           <div>
             <Label>{t('currencyBase')}</Label>
             <Select value={baseCurrency} onChange={(e) => setBaseCurrency(e.target.value)}>
-              <option value="USD">USD — US Dollar</option>
-              <option value="AED">AED — UAE Dirham</option>
-              <option value="AFN">AFN — Afghan Afghani</option>
-              <option value="EUR">EUR — Euro</option>
+              {CURRENCY_CATALOG.filter((c) => enabledCodes.includes(c.code)).map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {locale === 'en' ? c.en : c.fa}
+                </option>
+              ))}
             </Select>
             <p className="mt-1.5 text-[11px] text-slate-400">{t('currencyHint')}</p>
           </div>
@@ -252,6 +302,57 @@ export default function SettingsPage() {
               <span className="text-sm font-medium text-emerald-600">{t('settingsSaved')}</span>
             ) : null}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Currencies enable/disable */}
+      <Card className="overflow-hidden rounded-[24px] border-slate-200/80 shadow-none">
+        <div className="border-b border-slate-100 bg-gradient-to-r from-amber-50/80 to-orange-50/40 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900">{t('currenciesManage')}</h2>
+              <p className="text-xs text-slate-500">{t('currenciesManageHint')}</p>
+            </div>
+          </div>
+        </div>
+        <CardContent className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {CURRENCY_CATALOG.map((c) => {
+            const on = enabledCodes.includes(c.code);
+            return (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => toggleCurrency(c.code)}
+                className={cn(
+                  'flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-start transition',
+                  on
+                    ? 'border-emerald-200 bg-emerald-50/70'
+                    : 'border-slate-100 bg-slate-50/80 opacity-75 hover:opacity-100'
+                )}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-extrabold text-slate-900">
+                    <span className="num">{c.code}</span>
+                    <span className="ms-2 font-semibold text-slate-600">
+                      {locale === 'en' ? c.en : c.fa}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">{c.symbol}</p>
+                </div>
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                    on ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
+                  )}
+                >
+                  {on ? t('currenciesEnabled') : t('currenciesDisabled')}
+                </span>
+              </button>
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -297,7 +398,41 @@ export default function SettingsPage() {
           <h2 className="text-base font-extrabold text-slate-900">{t('settingsData')}</h2>
           <p className="mt-0.5 text-sm text-slate-500">{t('settingsDataDesc')}</p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <Card className="rounded-2xl border-teal-200 bg-teal-50/30 shadow-none">
+            <CardContent className="p-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
+                <FolderOpen className="h-5 w-5" />
+              </div>
+              <h3 className="mt-4 text-sm font-extrabold text-slate-900">{t('backupFolder')}</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{t('backupFolderHint')}</p>
+              <p className="mt-3 text-[11px] font-medium text-slate-600">
+                {t('backupFolderCurrent')}:{' '}
+                <span className="font-bold text-teal-800">
+                  {backupFolderName ?? t('backupFolderNone')}
+                </span>
+              </p>
+              <div className="mt-4 grid gap-2">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => void handlePickFolder()}
+                  disabled={!isBackupFolderSupported()}
+                >
+                  <FolderPlus className="ms-2 h-4 w-4" />
+                  {t('backupFolderPick')}
+                </Button>
+                <Button className="w-full" onClick={() => void handleBackupToFolder()}>
+                  <FolderOpen className="ms-2 h-4 w-4" />
+                  {t('backupFolderSave')}
+                </Button>
+              </div>
+              {!isBackupFolderSupported() ? (
+                <p className="mt-2 text-[11px] text-amber-700">{t('backupFolderUnsupported')}</p>
+              ) : null}
+            </CardContent>
+          </Card>
+
           <Card className="rounded-2xl border-slate-200 shadow-none">
             <CardContent className="p-5">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">

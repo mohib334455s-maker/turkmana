@@ -26,6 +26,8 @@ import {
   ResponsiveData,
 } from '@/components/shared/mobile-record-card';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
+import { useCompanyFormOptions } from '@/lib/use-company-form';
+import { useEnabledCurrencies } from '@/lib/currency-store';
 import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import {
   summarizeExchangeBalances,
@@ -53,6 +55,9 @@ function displayName(house: ExchangeHouse) {
 export default function ExchangePage() {
   const { t, locale, tx } = useI18n();
   const { company } = useCompanyStore();
+  const { options: companyOptions, defaultCompany, showCompanyField } =
+    useCompanyFormOptions();
+  const currencies = useEnabledCurrencies(locale);
   const items = useOpsStore((s) => (s.lists.exchangeHouses ?? EMPTY) as unknown as ExchangeHouse[]);
   const addToList = useOpsStore((s) => s.addToList);
   const removeFromList = useOpsStore((s) => s.removeFromList);
@@ -251,6 +256,9 @@ export default function ExchangePage() {
               }))}
             />
             <CompanySwitcher />
+            <Link href="/dashboard/finance/banks">
+              <Button variant="outline">{tx('بانک‌ها', 'Banks')}</Button>
+            </Link>
             <Button onClick={() => setCreateOpen(true)}>
               <Plus className="ml-2 h-4 w-4" />
               {tx('حساب جدید', 'New account')}
@@ -424,37 +432,49 @@ export default function ExchangePage() {
               { value: 'treasury', label: tx('خزانه', 'Treasury') },
             ],
           },
-          { key: 'currency', label: tx('ارز', 'Currency'), placeholder: 'USD' },
+          {
+            key: 'currency',
+            label: tx('ارز', 'Currency'),
+            type: 'select',
+            options: currencies.map((c) => ({ value: c.code, label: c.label })),
+          },
           { key: 'balance', label: tx('بیلانس اولیه', 'Opening balance'), type: 'number' },
           { key: 'location', label: tx('محل', 'Location'), placeholder: 'کابل / دبی / مسکو' },
           { key: 'phone', label: tx('تماس', 'Phone'), placeholder: '+93...' },
           { key: 'whatsapp', label: 'WhatsApp', placeholder: '+93...' },
           { key: 'contactPerson', label: tx('مسئول', 'Contact person') },
           { key: 'address', label: tx('آدرس', 'Address') },
-          {
-            key: 'company',
-            label: t('colCompany'),
-            type: 'select',
-            options: [
-              { value: 'arya', label: t('companyArya') },
-              { value: 'turkmen', label: t('companyTurkmen') },
-            ],
-          },
+          ...(showCompanyField
+            ? [
+                {
+                  key: 'company',
+                  label: t('colCompany'),
+                  type: 'select' as const,
+                  options: companyOptions,
+                },
+              ]
+            : []),
         ]}
-        initial={{ kind: 'exchanger', currency: 'USD', balance: '0', company: 'arya' }}
+        initial={{
+          kind: 'exchanger',
+          currency: currencies[0]?.code ?? 'USD',
+          balance: '0',
+          company: defaultCompany,
+        }}
         submitLabel={t('save')}
         onSubmit={(v) => {
           const kind = (v.kind as ExchangeAccountKind) || 'exchanger';
           const balance = Number(v.balance || 0);
           const name = v.name.trim();
+          const currency = v.currency || currencies[0]?.code || 'USD';
           addToList('exchangeHouses', {
             name,
-            currency: v.currency || 'USD',
+            currency,
             totalIn: balance > 0 ? balance : 0,
             totalOut: balance < 0 ? Math.abs(balance) : 0,
             balance,
             fxPnl: 0,
-            company: (v.company as CompanyKey) || 'arya',
+            company: (v.company as CompanyKey) || defaultCompany,
             kind,
             location: v.location || '',
             phone: v.phone || '',
@@ -471,8 +491,8 @@ export default function ExchangePage() {
             entityLabelFa: kindLabel(kind, 'fa'),
             entityLabelEn: kindLabel(kind, 'en'),
             entityName: name,
-            detailsFa: `بیلانس اولیه: ${formatCurrency(balance)} · ${v.currency || 'USD'}`,
-            detailsEn: `Opening balance: ${formatCurrency(balance)} · ${v.currency || 'USD'}`,
+            detailsFa: `بیلانس اولیه: ${formatCurrency(balance)} · ${currency}`,
+            detailsEn: `Opening balance: ${formatCurrency(balance)} · ${currency}`,
           });
         }}
       />

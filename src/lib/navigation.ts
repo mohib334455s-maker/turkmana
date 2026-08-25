@@ -172,7 +172,6 @@ export const navModules: NavModule[] = [
     children: [
       { key: 'journal', href: '/dashboard/journal' },
       { key: 'balanceSheet', href: '/dashboard/balance-sheet' },
-      { key: 'banks', href: '/dashboard/finance/banks' },
       { key: 'cash', href: '/dashboard/finance/cash' },
       { key: 'ledger', href: '/dashboard/finance/ledger' },
       { key: 'entries', href: '/dashboard/finance/entries' },
@@ -187,7 +186,10 @@ export const navModules: NavModule[] = [
     accent: 'text-lime-700',
     soft: 'from-lime-500/15 to-lime-500/5',
     ring: 'ring-lime-200/70',
-    children: [{ key: 'exchangeHouses', href: '/dashboard/exchange' }],
+    children: [
+      { key: 'exchangeHouses', href: '/dashboard/exchange' },
+      { key: 'banks', href: '/dashboard/finance/banks' },
+    ],
   },
   {
     key: 'hr',

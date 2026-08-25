@@ -17,15 +17,17 @@ export function CompanySwitcher({ className }: { className?: string }) {
   const options = allowedCompanyFilters(companyAccess);
 
   useEffect(() => {
-    const next = clampCompany(company as CompanyFilter | 'both', companyAccess);
+    const next = clampCompany(company, companyAccess);
     if (next !== company) setCompany(next);
   }, [company, companyAccess, setCompany]);
 
   const labels: Record<CompanyFilter, string> = {
     arya: t('companyArya'),
     turkmen: t('companyTurkmen'),
+    both: t('companyBoth'),
   };
 
+  // Single-company access: show badge only — no «هر دو» switcher
   if (options.length === 1) {
     return (
       <div
@@ -33,6 +35,11 @@ export function CompanySwitcher({ className }: { className?: string }) {
           'inline-flex items-center rounded-full bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800',
           className
         )}
+        title={
+          companyAccess === 'arya'
+            ? 'فقط آزیا آریا لمتید'
+            : 'فقط ترکمن پطرولیم'
+        }
       >
         {labels[options[0]]}
       </div>
@@ -42,9 +49,11 @@ export function CompanySwitcher({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'inline-flex w-full items-center rounded-full bg-slate-100 p-1 sm:w-auto',
+        'inline-flex w-full max-w-full items-center rounded-full bg-slate-100 p-1 sm:w-auto',
         className
       )}
+      role="group"
+      aria-label={t('company')}
     >
       {options.map((opt) => (
         <button
@@ -52,9 +61,11 @@ export function CompanySwitcher({ className }: { className?: string }) {
           type="button"
           onClick={() => setCompany(opt)}
           className={cn(
-            'flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition sm:flex-none sm:px-4',
+            'flex-1 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition sm:flex-none sm:px-3.5 sm:text-xs',
             company === opt
-              ? 'bg-teal-500 text-white shadow-sm shadow-teal-200/70'
+              ? opt === 'both'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'bg-teal-500 text-white shadow-sm shadow-teal-200/70'
               : 'text-slate-500 hover:text-slate-700'
           )}
         >

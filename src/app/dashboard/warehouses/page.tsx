@@ -24,6 +24,7 @@ import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { ExtraRow, MobileRecordCard } from '@/components/shared/mobile-record-card';
 import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
+import { useCompanyFormOptions } from '@/lib/use-company-form';
 import {
   portLabel,
   portSelectOptions,
@@ -47,6 +48,8 @@ const STORAGE_TYPES = [
 export default function WarehousesPage() {
   const { t, locale, tx } = useI18n();
   const { company } = useCompanyStore();
+  const { options: companyOptions, defaultCompany, showCompanyField } =
+    useCompanyFormOptions();
   const warehouses = useOpsStore((s) => s.warehouseEntities);
   const lots = useOpsStore((s) => s.stockLots);
   const addWarehouse = useOpsStore((s) => s.addWarehouse);
@@ -402,22 +405,23 @@ export default function WarehousesPage() {
             required: true,
             options: unitOptions,
           },
-          {
-            key: 'company',
-            label: t('colCompany'),
-            type: 'select',
-            options: [
-              { value: 'arya', label: t('companyArya') },
-              { value: 'turkmen', label: t('companyTurkmen') },
-            ],
-          },
+          ...(showCompanyField
+            ? [
+                {
+                  key: 'company',
+                  label: t('colCompany'),
+                  type: 'select' as const,
+                  options: companyOptions,
+                },
+              ]
+            : []),
           { key: 'notes', label: t('colNotes') },
         ]}
         initial={{
           type: 'مواد ارتزاقی',
           capacityUnit: 'تن',
           port: 'تورغندی',
-          company: 'arya',
+          company: defaultCompany,
           capacity: '',
         }}
         submitLabel={t('save')}
@@ -428,7 +432,7 @@ export default function WarehousesPage() {
             port,
             location: (v.location || port).trim(),
             type: v.type || 'مواد ارتزاقی',
-            company: (v.company as CompanyKey) || 'arya',
+            company: (v.company as CompanyKey) || defaultCompany,
             capacity: Number(v.capacity || 0),
             capacityUnit: v.capacityUnit || 'تن',
             notes: v.notes || '',

@@ -16,7 +16,7 @@ const fa = {
   company: 'شرکت',
   companyArya: 'آزیا آریا لمتید',
   companyTurkmen: 'ترکمن پطرولیم',
-  companyBoth: 'هر دو شرکت',
+  companyBoth: 'هر دو شرکت (قدرت انتخاب)',
   expandSidebar: 'باز کردن منو',
   collapseSidebar: 'بستن منو',
   modules: 'ماژول‌ها',
@@ -63,7 +63,7 @@ const fa = {
   calendarHint: 'تقویم نمایشی در هدر و گزارش‌ها',
   currencyHint: 'ارز پایه گزارش‌ها و مبالغ',
   companyHint:
-    'اگر دسترسی «هر دو» دارید بین آزیا، ترکمن یا هر دو انتخاب کنید؛ در یک شرکت فقط همان نشان داده می‌شود',
+    'شرکت فعال برای کار روزمره — هر ثبت فقط به یک شرکت تعلق دارد؛ دسترسی «هر دو» فقط قدرت انتخاب بین آزیا و ترکمن است',
   currencyBase: 'ارز پایه',
   currenciesManage: 'فعال‌سازی ارزها',
   currenciesManageHint:
@@ -397,7 +397,7 @@ const en: { [K in keyof typeof fa]: (typeof fa)[K] extends string ? string : { [
   company: 'Company',
   companyArya: 'Azya Aria LTD',
   companyTurkmen: 'Turkmen Petroleum Company',
-  companyBoth: 'Both companies',
+  companyBoth: 'Both companies (can switch)',
   expandSidebar: 'Expand menu',
   collapseSidebar: 'Collapse menu',
   modules: 'Modules',
@@ -444,7 +444,7 @@ const en: { [K in keyof typeof fa]: (typeof fa)[K] extends string ? string : { [
   calendarHint: 'Calendar shown in the header and reports',
   currencyHint: 'Base currency for reports and amounts',
   companyHint:
-    'With “both” access you can pick Arya, Turkmen or both; a single-company user only sees that company',
+    'Active company for daily work — every record belongs to one company; “both” access only lets you switch between Arya and Turkmen',
   currencyBase: 'Base currency',
   currenciesManage: 'Enable currencies',
   currenciesManageHint:

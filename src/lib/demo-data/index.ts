@@ -250,7 +250,7 @@ export type ExchangeHouse = {
   totalOut: number;
   balance: number;
   fxPnl: number;
-  company: CompanyKey | 'both';
+  company: CompanyKey;
   /** Default exchanger; joint/treasury appear in separate summary rows */
   kind?: ExchangeAccountKind;
   location?: string;
@@ -341,7 +341,6 @@ export const dashboardKpis = {
 };
 
 export const financialSummary = {
-  both: { ...emptyFin },
   arya: { ...emptyFin },
   turkmen: { ...emptyFin },
 };

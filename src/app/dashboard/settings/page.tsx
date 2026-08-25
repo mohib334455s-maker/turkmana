@@ -257,11 +257,7 @@ export default function SettingsPage() {
             >
               {companyChoices.map((c) => (
                 <option key={c} value={c}>
-                  {c === 'arya'
-                    ? t('companyArya')
-                    : c === 'turkmen'
-                      ? t('companyTurkmen')
-                      : t('companyBoth')}
+                  {c === 'turkmen' ? t('companyTurkmen') : t('companyArya')}
                 </option>
               ))}
             </Select>

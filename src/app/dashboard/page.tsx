@@ -45,11 +45,7 @@ export default function DashboardPage() {
   const pnlOk = canViewProfitLoss(role, profitLossRoles);
   const fin = financialSummary[company];
   const companyLabel =
-    company === 'arya'
-      ? t('companyArya')
-      : company === 'turkmen'
-        ? t('companyTurkmen')
-        : t('companyBoth');
+    company === 'turkmen' ? t('companyTurkmen') : t('companyArya');
 
   const kpiCards = [
     {

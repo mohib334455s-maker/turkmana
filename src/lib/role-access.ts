@@ -218,12 +218,14 @@ export function describeCompanyScope(
   }
   return locale === 'fa'
     ? {
-        title: 'آزیا آریا لمتید و ترکمن پطرولیم (سوئیچ)',
-        detail: 'می‌تواند بین آزیا آریا لمتید و ترکمن پطرولیم جابه‌جا شود؛ هر بار فقط یک شرکت فعال است',
+        title: 'آزیا آریا لمتید و ترکمن پطرولیم (قدرت انتخاب)',
+        detail:
+          'می‌تواند بین آزیا آریا لمتید و ترکمن پطرولیم جابه‌جا شود؛ هر بار فقط یک شرکت فعال است و ثبت‌ها جدا هستند',
       }
     : {
-        title: 'Arya & Turkmen (switch)',
-        detail: 'Can switch between Azya Aria Ltd and Turkmen; one active company at a time',
+        title: 'Arya & Turkmen (can switch)',
+        detail:
+          'Can switch between Azya Aria Ltd and Turkmen; one active company at a time — records stay separate',
       };
 }
 

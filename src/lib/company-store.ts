@@ -3,16 +3,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-/** Active view filter: one company, or both together */
-export type CompanyFilter = 'arya' | 'turkmen' | 'both';
+/**
+ * Active working company in the header / filters.
+ * Never «both» — each screen shows one company's books.
+ */
+export type CompanyFilter = 'arya' | 'turkmen';
 
-/** Company stamped on a record (records are never "both") */
+/** Company stamped on a record (always one company). */
 export type RecordCompany = 'arya' | 'turkmen';
 
 export const COMPANY_LABELS: Record<CompanyFilter, string> = {
   arya: 'آزیا آریا لمتید',
   turkmen: 'ترکمن پطرولیم',
-  both: 'هر دو شرکت',
 };
 
 interface CompanyState {
@@ -20,45 +22,54 @@ interface CompanyState {
   setCompany: (company: CompanyFilter) => void;
 }
 
+function asCompanyFilter(raw?: string): CompanyFilter {
+  if (raw === 'turkmen') return 'turkmen';
+  return 'arya';
+}
+
 export const useCompanyStore = create<CompanyState>()(
   persist(
     (set) => ({
-      company: 'both',
-      setCompany: (company) => set({ company }),
+      company: 'arya',
+      setCompany: (company) => set({ company: asCompanyFilter(company) }),
     }),
     {
       name: 'erp-company-filter',
-      version: 4,
+      version: 5,
       migrate: (persisted) => {
         const state = persisted as { company?: string; state?: { company?: string } };
         const raw = state?.company ?? state?.state?.company;
-        if (raw === 'arya' || raw === 'turkmen' || raw === 'both') {
-          return { company: raw };
-        }
-        return { company: 'both' as CompanyFilter };
+        return { company: asCompanyFilter(raw) };
       },
     }
   )
 );
 
 /**
- * When filter is «هر دو» → show all companies.
- * When filter is one company → only that company's rows.
+ * Row belongs to the active company.
+ * Legacy rows marked «both» appear under either company until re-saved.
  */
 export function matchesCompany(
   itemCompany: 'arya' | 'turkmen' | 'both' | string | undefined,
   filter: CompanyFilter
 ): boolean {
-  if (filter === 'both') return true;
   if (!itemCompany || itemCompany === 'both') return true;
   return itemCompany === filter;
 }
 
-/** Locked company for new records when viewing a single company */
+/** Company stamped on new records — always one of the two. */
 export function resolveRecordCompany(
   filter: CompanyFilter,
   fallback: RecordCompany = 'arya'
 ): RecordCompany {
   if (filter === 'arya' || filter === 'turkmen') return filter;
+  return fallback;
+}
+
+export function normalizeRecordCompany(
+  value: string | undefined,
+  fallback: RecordCompany = 'arya'
+): RecordCompany {
+  if (value === 'arya' || value === 'turkmen') return value;
   return fallback;
 }

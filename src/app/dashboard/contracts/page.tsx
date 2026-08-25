@@ -23,6 +23,7 @@ import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/
 import { TableEmpty } from '@/components/shared/table-empty';
 import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
+import { useCompanyFormOptions } from '@/lib/use-company-form';
 import { emptyContract, useOpsStore } from '@/lib/ops-store';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import type { CompanyKey } from '@/lib/demo-data';
@@ -40,6 +41,8 @@ export default function ContractsPage() {
   const { t, tn, locale, tx } = useI18n();
   const catalog = useProductCatalog();
   const { company } = useCompanyStore();
+  const { options: companyOptions, defaultCompany, showCompanyField } =
+    useCompanyFormOptions();
   const items = useOpsStore((s) => s.contracts);
   const addContract = useOpsStore((s) => s.addContract);
   const updateContract = useOpsStore((s) => s.updateContract);
@@ -85,13 +88,10 @@ export default function ContractsPage() {
       key: 'company',
       label: t('colCompany'),
       type: 'select' as const,
-      options: [
-        { value: 'arya', label: t('companyArya') },
-        { value: 'turkmen', label: t('companyTurkmen') },
-      ],
+      options: companyOptions,
     },
     { key: 'notes', label: t('colNotes') },
-  ];
+  ].filter((f) => f.key !== 'company' || showCompanyField);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -516,7 +516,7 @@ export default function ContractsPage() {
           const base = unloaded || arrived || Number(v.totalQty || 0);
           const sellable = Math.max(0, base - sold - shortage - waste);
           addContract({
-            ...emptyContract((v.company as CompanyKey) || 'arya'),
+            ...emptyContract((v.company as CompanyKey) || defaultCompany),
             number: v.number.trim(),
             supplierName: v.supplierName.trim(),
             product: product?.label || v.productCode,
@@ -533,7 +533,7 @@ export default function ContractsPage() {
             transit: Number(v.transit || 0),
             pricePerUnit: Number(v.pricePerUnit || 0),
             location: v.location.trim(),
-            company: (v.company as CompanyKey) || 'arya',
+            company: (v.company as CompanyKey) || defaultCompany,
             notes: v.notes || '',
           });
         }}

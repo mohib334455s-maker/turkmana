@@ -1,6 +1,6 @@
 import type { CompanyFilter } from '@/lib/company-store';
 import type { CustomerRecord } from '@/lib/demo-data';
-import { emptyGoods, goodsValue, products, sumGoods } from '@/lib/demo-data';
+import { emptyGoods, goodsValue, products } from '@/lib/demo-data';
 import type { CustomerLedgerRow } from '@/lib/demo-data';
 
 export type CustomerBalanceView = {
@@ -37,20 +37,14 @@ export function resolveCustomerBalances(
   let goods: Record<string, number>;
   let goodsBalance: number;
 
-  if (company === 'arya') {
-    cashBalance = ledgerRows.length > 0 && ledgerCash !== undefined ? ledgerCash : aryaCash;
-    goods = { ...aryaGoods };
-    goodsBalance =
-      ledgerRows.length > 0 && ledgerGoods !== undefined ? ledgerGoods : customerGoodsQty(goods);
-  } else if (company === 'turkmen') {
+  if (company === 'turkmen') {
     cashBalance = ledgerRows.length > 0 && ledgerCash !== undefined ? ledgerCash : turkmenCash;
     goods = { ...turkmenGoods };
     goodsBalance =
       ledgerRows.length > 0 && ledgerGoods !== undefined ? ledgerGoods : customerGoodsQty(goods);
   } else {
-    cashBalance =
-      ledgerRows.length > 0 && ledgerCash !== undefined ? ledgerCash : aryaCash + turkmenCash;
-    goods = sumGoods(aryaGoods, turkmenGoods);
+    cashBalance = ledgerRows.length > 0 && ledgerCash !== undefined ? ledgerCash : aryaCash;
+    goods = { ...aryaGoods };
     goodsBalance =
       ledgerRows.length > 0 && ledgerGoods !== undefined ? ledgerGoods : customerGoodsQty(goods);
   }

@@ -23,6 +23,7 @@ import { TableEmpty } from '@/components/shared/table-empty';
 import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { JournalLinkChips } from '@/components/journal/related-journal';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
+import { useCompanyFormOptions } from '@/lib/use-company-form';
 import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import type { CompanyKey, JournalEntry } from '@/lib/demo-data';
 import { formatCurrency } from '@/lib/utils';
@@ -64,6 +65,8 @@ function displayValue(row: JournalEntry) {
 export default function JournalPage() {
   const { t, tx } = useI18n();
   const { company } = useCompanyStore();
+  const { options: companyOptions, defaultCompany, showCompanyField } =
+    useCompanyFormOptions();
   const items = useOpsStore((s) => (s.lists.journal ?? EMPTY) as unknown as JournalEntry[]);
   const addToList = useOpsStore((s) => s.addToList);
   const setList = useOpsStore((s) => s.setList);
@@ -524,22 +527,23 @@ export default function JournalPage() {
           { key: 'markA', label: 'ح', type: 'checkbox', placeholder: 'ح' },
           { key: 'markN', label: 'ن', type: 'checkbox', placeholder: 'ن' },
           { key: 'markC', label: 'ا', type: 'checkbox', placeholder: 'ا' },
-          {
-            key: 'company',
-            label: tx('شرکت', 'Company'),
-            type: 'select',
-            options: [
-              { value: 'arya', label: 'آریا' },
-              { value: 'turkmen', label: 'ترکمن' },
-            ],
-          },
+          ...(showCompanyField
+            ? [
+                {
+                  key: 'company',
+                  label: tx('شرکت', 'Company'),
+                  type: 'select' as const,
+                  options: companyOptions,
+                },
+              ]
+            : []),
         ]}
         initial={{
           number: defaultBook,
           date: todayIso(),
           unit: 'تن',
           opType: 'other',
-          company: company === 'turkmen' ? 'turkmen' : 'arya',
+          company: defaultCompany,
         }}
         submitLabel={tx('ثبت', 'Post')}
         onSubmit={(v) => {
@@ -567,7 +571,7 @@ export default function JournalPage() {
             currency: 'USD',
             opType: v.opType,
             status: v.opType === 'receipt' ? 'received' : 'posted',
-            company: (v.company as CompanyKey) || 'arya',
+            company: (v.company as CompanyKey) || defaultCompany,
             links,
             marks: {
               office: v.markH === '1',

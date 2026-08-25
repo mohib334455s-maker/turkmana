@@ -21,6 +21,7 @@ import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/
 import { TableEmpty } from '@/components/shared/table-empty';
 import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
+import { useCompanyFormOptions } from '@/lib/use-company-form';
 import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import { normalizeParty } from '@/lib/stock-lots';
 import { isPartyOpenForExpenses } from '@/lib/permissions';
@@ -34,6 +35,8 @@ const EMPTY: OpsRow[] = [];
 
 export default function PartiesPage() {
   const { t, locale } = useI18n();
+  const { options: companyOptions, defaultCompany, showCompanyField } =
+    useCompanyFormOptions();
   const catalog = useProductCatalog();
   const contracts = useOpsStore((s) => s.contracts);
   const rawRows = useOpsStore((s) => (s.lists.parties ?? EMPTY) as OpsRow[]);
@@ -338,15 +341,16 @@ export default function PartiesPage() {
           { key: 'plannedQty', label: locale === 'en' ? 'Planned qty' : 'مقدار برنامه', type: 'number', required: true },
           { key: 'plannedWagons', label: locale === 'en' ? 'Wagons/trucks' : 'واگن/موتر', type: 'number' },
           { key: 'location', label: locale === 'en' ? 'Location' : 'محل', placeholder: 'هرات (تورغندی)' },
-          {
-            key: 'company',
-            label: t('colCompany'),
-            type: 'select',
-            options: [
-              { value: 'arya', label: t('companyArya') },
-              { value: 'turkmen', label: t('companyTurkmen') },
-            ],
-          },
+          ...(showCompanyField
+            ? [
+                {
+                  key: 'company',
+                  label: t('colCompany'),
+                  type: 'select' as const,
+                  options: companyOptions,
+                },
+              ]
+            : []),
           { key: 'notes', label: t('colNotes') },
         ]}
         submitLabel={t('save')}
@@ -364,7 +368,7 @@ export default function PartiesPage() {
             productCode: product?.code || contract?.productCode || '',
             unit: v.unit || product?.unit || contract?.unit || 'تن',
             location: v.location,
-            company: (v.company as CompanyKey) || contract?.company || 'arya',
+            company: (v.company as CompanyKey) || contract?.company || defaultCompany,
             plannedWagons: wagons,
             plannedQty: qty,
             wagons,

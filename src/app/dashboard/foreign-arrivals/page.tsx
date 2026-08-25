@@ -25,6 +25,7 @@ import { TableEmpty } from '@/components/shared/table-empty';
 import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { Dialog } from '@/components/ui/dialog';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
+import { useCompanyFormOptions } from '@/lib/use-company-form';
 import { useOpsStore, type OpsRow } from '@/lib/ops-store';
 import type { CompanyKey, ForeignArrivalRecord } from '@/lib/demo-data';
 import {
@@ -47,6 +48,8 @@ const EXPENSE_COLS_KEY = 'foreignArrivalExpenseColumns';
 export default function ForeignArrivalsPage() {
   const { t, tx, locale } = useI18n();
   const { company } = useCompanyStore();
+  const { options: companyOptions, defaultCompany, showCompanyField } =
+    useCompanyFormOptions();
   const items = useOpsStore(
     (s) => (s.lists.foreignArrivals ?? EMPTY) as unknown as ForeignArrivalRecord[]
   );
@@ -568,17 +571,18 @@ export default function ForeignArrivalsPage() {
           },
           { key: 'location', label: tx('محل', 'Location') },
           { key: 'originCountry', label: tx('کشور مبدأ', 'Origin country') },
-          {
-            key: 'company',
-            label: t('colCompany'),
-            type: 'select',
-            options: [
-              { value: 'arya', label: t('companyArya') },
-              { value: 'turkmen', label: t('companyTurkmen') },
-            ],
-          },
+          ...(showCompanyField
+            ? [
+                {
+                  key: 'company',
+                  label: t('colCompany'),
+                  type: 'select' as const,
+                  options: companyOptions,
+                },
+              ]
+            : []),
         ]}
-        initial={{ date: todayIso(), company: 'arya' }}
+        initial={{ date: todayIso(), company: defaultCompany }}
         submitLabel={tx('ثبت وارده', 'Save arrival')}
         onSubmit={(v) => {
           const dateIso = v.date || todayIso();
@@ -604,7 +608,7 @@ export default function ForeignArrivalsPage() {
             border: '',
             destWarehouse: '',
             status: 'در راه',
-            company: (v.company as CompanyKey) || 'arya',
+            company: (v.company as CompanyKey) || defaultCompany,
             notes: '',
             expenses: Object.fromEntries(expenseCols.map((c) => [c.key, 0])),
           });

@@ -24,10 +24,9 @@ export function CompanySwitcher({ className }: { className?: string }) {
   const labels: Record<CompanyFilter, string> = {
     arya: t('companyArya'),
     turkmen: t('companyTurkmen'),
-    both: t('companyBoth'),
   };
 
-  // Single-company access: show badge only — no «هر دو» switcher
+  // Single-company access: badge only
   if (options.length === 1) {
     return (
       <div
@@ -46,6 +45,7 @@ export function CompanySwitcher({ className }: { className?: string }) {
     );
   }
 
+  // Both-access: switch Arya ↔ Turkmen only (no «هر دو» books view)
   return (
     <div
       className={cn(
@@ -63,9 +63,7 @@ export function CompanySwitcher({ className }: { className?: string }) {
           className={cn(
             'flex-1 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition sm:flex-none sm:px-3.5 sm:text-xs',
             company === opt
-              ? opt === 'both'
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'bg-teal-500 text-white shadow-sm shadow-teal-200/70'
+              ? 'bg-teal-500 text-white shadow-sm shadow-teal-200/70'
               : 'text-slate-500 hover:text-slate-700'
           )}
         >

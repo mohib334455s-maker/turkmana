@@ -23,6 +23,7 @@ import { TableEmpty } from '@/components/shared/table-empty';
 import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
 import { PurchaseStatusBadge, useCompanyName } from '@/components/purchases/purchase-status-badge';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
+import { useCompanyFormOptions } from '@/lib/use-company-form';
 import { useI18n } from '@/lib/i18n/store';
 import { useOpsStore } from '@/lib/ops-store';
 import { useProductCatalog } from '@/lib/product-catalog';
@@ -34,6 +35,8 @@ export default function PurchaseOrdersPage() {
   const { t } = useI18n();
   const companyName = useCompanyName();
   const { company } = useCompanyStore();
+  const { options: companyOptions, defaultCompany, showCompanyField } =
+    useCompanyFormOptions();
   const catalog = useProductCatalog();
   const suppliers = useOpsStore((s) => s.suppliers);
   const orders = useOpsStore((s) => s.purchaseOrders);
@@ -54,48 +57,46 @@ export default function PurchaseOrdersPage() {
   );
 
   const fields = useMemo(
-    () => [
-      {
-        key: 'supplierId',
-        label: t('colSupplier'),
-        type: 'select' as const,
-        required: true,
-        options: suppliers.map((s) => ({ value: String(s.id), label: s.name })),
-      },
-      {
-        key: 'company',
-        label: t('colCompany'),
-        type: 'select' as const,
-        required: true,
-        options: [
-          { value: 'arya', label: t('companyArya') },
-          { value: 'turkmen', label: t('companyTurkmen') },
-        ],
-      },
-      {
-        key: 'productCode',
-        label: t('colProduct'),
-        type: 'select' as const,
-        required: true,
-        options: catalog.map((p) => ({ value: p.code, label: `${p.label} (${p.unit})` })),
-      },
-      { key: 'qty', label: t('colQty'), type: 'number' as const, required: true },
-      { key: 'unitPrice', label: t('colRate'), type: 'number' as const, required: true },
-      { key: 'date', label: t('colOrderDate'), type: 'date' as const, required: true },
-      { key: 'expectedDate', label: t('colExpectedDate'), type: 'date' as const },
-      {
-        key: 'currency',
-        label: t('colCurrency'),
-        type: 'select' as const,
-        options: [
-          { value: 'USD', label: 'USD' },
-          { value: 'AED', label: 'AED' },
-          { value: 'AFN', label: 'AFN' },
-        ],
-      },
-      { key: 'notes', label: t('colNotes'), type: 'text' as const },
-    ],
-    [t, suppliers, catalog]
+    () =>
+      [
+        {
+          key: 'supplierId',
+          label: t('colSupplier'),
+          type: 'select' as const,
+          required: true,
+          options: suppliers.map((s) => ({ value: String(s.id), label: s.name })),
+        },
+        {
+          key: 'company',
+          label: t('colCompany'),
+          type: 'select' as const,
+          required: true,
+          options: companyOptions,
+        },
+        {
+          key: 'productCode',
+          label: t('colProduct'),
+          type: 'select' as const,
+          required: true,
+          options: catalog.map((p) => ({ value: p.code, label: `${p.label} (${p.unit})` })),
+        },
+        { key: 'qty', label: t('colQty'), type: 'number' as const, required: true },
+        { key: 'unitPrice', label: t('colRate'), type: 'number' as const, required: true },
+        { key: 'date', label: t('colOrderDate'), type: 'date' as const, required: true },
+        { key: 'expectedDate', label: t('colExpectedDate'), type: 'date' as const },
+        {
+          key: 'currency',
+          label: t('colCurrency'),
+          type: 'select' as const,
+          options: [
+            { value: 'USD', label: 'USD' },
+            { value: 'AED', label: 'AED' },
+            { value: 'AFN', label: 'AFN' },
+          ],
+        },
+        { key: 'notes', label: t('colNotes'), type: 'text' as const },
+      ].filter((f) => f.key !== 'company' || showCompanyField),
+    [t, suppliers, catalog, companyOptions, showCompanyField]
   );
 
   return (
@@ -294,7 +295,13 @@ export default function PurchaseOrdersPage() {
         title={t('newPurchaseOrder')}
         description={t('poCreatedHint')}
         fields={fields}
-        initial={{ date: todayIso(), expectedDate: '', qty: '', unitPrice: '' }}
+        initial={{
+          date: todayIso(),
+          expectedDate: '',
+          qty: '',
+          unitPrice: '',
+          company: defaultCompany,
+        }}
         submitLabel={t('save')}
         onSubmit={(values) => {
           const supplier = suppliers.find((s) => String(s.id) === values.supplierId);
@@ -311,7 +318,7 @@ export default function PurchaseOrdersPage() {
             unit: product.unit,
             unitPrice: Number(values.unitPrice || 0),
             currency: values.currency || 'USD',
-            company: values.company === 'turkmen' ? 'turkmen' : 'arya',
+            company: values.company === 'turkmen' ? 'turkmen' : defaultCompany,
             notes: values.notes || '',
           });
         }}

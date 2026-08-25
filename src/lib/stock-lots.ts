@@ -27,9 +27,13 @@ export type WarehouseEntity = {
   id: number;
   name: string;
   location: string;
+  /** Port / bandar for filtering (تورغندی، آقینه، …) */
+  port?: string;
   type: string;
   company: CompanyKey;
   capacity: number;
+  /** Capacity unit: تن، کارتن، خریطه، لیتر، … */
+  capacityUnit?: string;
   notes: string;
 };
 

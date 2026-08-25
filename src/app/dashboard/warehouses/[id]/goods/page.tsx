@@ -30,6 +30,7 @@ import { todayIso } from '@/lib/purchase-flow';
 import { useI18n } from '@/lib/i18n/store';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { RelatedJournal } from '@/components/journal/related-journal';
+import { unitSelectOptions } from '@/lib/catalog-master';
 import type { StockLot } from '@/lib/stock-lots';
 
 export default function StorageGoodsPage({
@@ -39,7 +40,7 @@ export default function StorageGoodsPage({
 }) {
   const { id } = use(params);
   const warehouseId = Number(id);
-  const { t, tx } = useI18n();
+  const { t, tx, locale } = useI18n();
   const catalog = useProductCatalog();
   const warehouseEntities = useOpsStore((s) => s.warehouseEntities);
   const stockLotsAll = useOpsStore((s) => s.stockLots);
@@ -325,11 +326,18 @@ export default function StorageGoodsPage({
             required: true,
             options: catalog.map((p) => ({ value: p.code, label: p.label })),
           },
-          { key: 'qty', label: tx('مقدار تخلیه (تن)', 'Unload qty (tons)'), type: 'number', required: true },
+          { key: 'qty', label: tx('مقدار تخلیه', 'Unload qty'), type: 'number', required: true },
+          {
+            key: 'unit',
+            label: tx('واحد', 'Unit'),
+            type: 'select',
+            required: true,
+            options: unitSelectOptions(locale),
+          },
           { key: 'unitPrice', label: tx('قیمت بارگیری / واحد', 'Load unit price'), type: 'number' },
           { key: 'wagons', label: tx('تعداد واگن', 'Wagons'), type: 'number' },
-          { key: 'shortageQty', label: tx('کسرات (تن)', 'Shortage (tons)'), type: 'number' },
-          { key: 'wasteQty', label: tx('ضایعات (تن)', 'Waste (tons)'), type: 'number' },
+          { key: 'shortageQty', label: tx('کسرات', 'Shortage'), type: 'number' },
+          { key: 'wasteQty', label: tx('ضایعات', 'Waste'), type: 'number' },
           { key: 'date', label: tx('تاریخ', 'Date'), type: 'date', required: true },
           {
             key: 'contractId',
@@ -350,11 +358,20 @@ export default function StorageGoodsPage({
           { key: 'counterparty', label: tx('طرف حساب', 'Counterparty') },
           { key: 'details', label: tx('تفصیلات', 'Details') },
         ]}
-        initial={{ date: todayIso(), qty: '', unitPrice: '', wagons: '', shortageQty: '', wasteQty: '' }}
+        initial={{
+          date: todayIso(),
+          qty: '',
+          unit: warehouse?.capacityUnit || 'تن',
+          unitPrice: '',
+          wagons: '',
+          shortageQty: '',
+          wasteQty: '',
+        }}
         onSubmit={(v) => {
           const product = catalog.find((p) => p.code === v.productCode) ?? catalog[0];
           const qty = Number(v.qty || 0);
           if (!product || qty <= 0) return;
+          const unit = v.unit || product.unit || warehouse?.capacityUnit || 'تن';
           const contract = contracts.find((c) => c.id === Number(v.contractId || 0));
           const partyId = Number(v.partyId || 0) || undefined;
           const party = rawParties.find((p) => Number(p.id) === partyId);
@@ -365,7 +382,7 @@ export default function StorageGoodsPage({
             warehouseId,
             productCode: product.code,
             productName: product.name,
-            unit: product.unit,
+            unit,
             qty,
             unitPrice: Number(v.unitPrice || contract?.pricePerUnit || 0),
             contractId: contract?.id ?? 0,
@@ -382,11 +399,11 @@ export default function StorageGoodsPage({
             counterparty: v.counterparty || contract?.supplierName || warehouse.name,
             details:
               v.details ||
-              `تخلیه ${qty} ${product.unit} ${product.name}${partyNumber ? ` — پارتی ${partyNumber}` : ''}`,
+              `تخلیه ${qty} ${unit} ${product.name}${partyNumber ? ` — پارتی ${partyNumber}` : ''}`,
             productName: product.name,
             productCode: product.code,
             qty,
-            unit: product.unit,
+            unit,
             wagons: Number(v.wagons || 0) || undefined,
             shortageQty: Number(v.shortageQty || 0) || undefined,
             wasteQty: Number(v.wasteQty || 0) || undefined,

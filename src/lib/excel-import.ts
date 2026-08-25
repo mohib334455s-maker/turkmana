@@ -70,7 +70,7 @@ export const EXCEL_SHEETS = [
   },
   {
     name: 'warehouses',
-    columns: ['id', 'name', 'location', 'type', 'company', 'capacity', 'notes'],
+    columns: ['id', 'name', 'location', 'port', 'type', 'company', 'capacity', 'capacityUnit', 'notes'],
   },
   {
     name: 'customers',
@@ -237,10 +237,12 @@ export async function importExcelFile(
     const warehouses = sheetToObjects(wb, 'warehouses').map((r, i) => ({
       id: num(r.id, i + 1),
       name: str(r.name),
-      location: str(r.location),
+      location: str(r.location) || str(r.port),
+      port: str(r.port) || str(r.location),
       type: str(r.type) || 'مواد ارتزاقی',
       company: companyKey(r.company),
       capacity: num(r.capacity),
+      capacityUnit: str(r.capacityUnit) || 'تن',
       notes: str(r.notes),
     }));
     if (warehouses.length) {

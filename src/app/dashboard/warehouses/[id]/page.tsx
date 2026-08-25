@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/page-header';
 import { useOpsStore } from '@/lib/ops-store';
 import { cashNet } from '@/lib/storage-ledger';
+import { portLabel, unitLabel } from '@/lib/catalog-master';
 import { useI18n } from '@/lib/i18n/store';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 
@@ -18,7 +19,7 @@ export default function StorageChoicePage({
 }) {
   const { id } = use(params);
   const warehouseId = Number(id);
-  const { tx } = useI18n();
+  const { tx, locale } = useI18n();
   const warehouseEntities = useOpsStore((s) => s.warehouseEntities);
   const stockLotsAll = useOpsStore((s) => s.stockLots);
   const storageGoodsMovesAll = useOpsStore((s) => s.storageGoodsMoves);
@@ -53,14 +54,16 @@ export default function StorageChoicePage({
 
   const qty = lots.reduce((s, l) => s + l.qty, 0);
   const cashBal = cash.reduce((s, e) => s + cashNet(e), 0);
+  const capacityUnit = warehouse.capacityUnit || lots[0]?.unit || 'تن';
+  const port = warehouse.port || warehouse.location || '';
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title={warehouse.name}
         description={tx(
-          'این ذخیره دو حساب جدا دارد: جنسی (تخلیه و بارگیری) و نقدی (پرداخت و سنجش کرایه ذخیره).',
-          'This depot has two ledgers: goods (unload/load) and cash (payments and storage rent assessment).'
+          `بندر: ${portLabel(port, locale) || '—'} · ظرفیت: ${formatNumber(warehouse.capacity || 0, 0)} ${unitLabel(capacityUnit, locale)} · ${warehouse.type || 'ذخیره'}`,
+          `Port: ${portLabel(port, locale) || '—'} · Capacity: ${formatNumber(warehouse.capacity || 0, 0)} ${unitLabel(capacityUnit, locale)} · ${warehouse.type || 'Storage'}`
         )}
         actions={
           <Link href="/dashboard/warehouses">
@@ -71,6 +74,37 @@ export default function StorageChoicePage({
           </Link>
         }
       />
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500">{tx('بندر', 'Port')}</p>
+            <p className="mt-1 font-bold">{portLabel(port, locale) || '—'}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500">{tx('ظرفیت', 'Capacity')}</p>
+            <p className="mt-1 font-bold num">
+              {formatNumber(warehouse.capacity || 0, 0)}{' '}
+              <span className="text-sm font-medium text-slate-500">
+                {unitLabel(capacityUnit, locale)}
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500">{tx('موجودی فعلی', 'Current stock')}</p>
+            <p className="mt-1 font-bold num">
+              {formatNumber(qty, 3)}{' '}
+              <span className="text-sm font-medium text-slate-500">
+                {unitLabel(capacityUnit, locale)}
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Link href={`/dashboard/warehouses/${warehouseId}/goods`} className="block">
@@ -83,15 +117,15 @@ export default function StorageChoicePage({
                 <h2 className="text-xl font-extrabold">{tx('بخش جنسی', 'Goods section')}</h2>
                 <p className="mt-1 text-sm leading-relaxed text-slate-500">
                   {tx(
-                    'تخلیه به ذخیره و بارگیری از ذخیره. موجودی بر اساس قرارداد و پارتی.',
-                    'Unload into the depot and load out. Stock is by contract and party.'
+                    'تخلیه به ذخیره و بارگیری از ذخیره. موجودی با واحد کالا (تن، کارتن، خریطه…).',
+                    'Unload into the depot and load out. Stock uses each product unit (ton, carton, bag…).'
                   )}
                 </p>
               </div>
               <p className="num text-2xl font-extrabold text-slate-900">
                 {formatNumber(qty, 3)}
                 <span className="ms-2 text-sm font-medium text-slate-500">
-                  {tx('موجودی', 'on hand')}
+                  {unitLabel(capacityUnit, locale)}
                 </span>
               </p>
               <p className="text-xs text-slate-400">
@@ -111,8 +145,8 @@ export default function StorageChoicePage({
                 <h2 className="text-xl font-extrabold">{tx('بخش نقدی', 'Cash section')}</h2>
                 <p className="mt-1 text-sm leading-relaxed text-slate-500">
                   {tx(
-                    'طلب و پرداخت ذخیره، محل، نوعیت جنس، و کرایه روزانه واگن تا تاریخ ختم.',
-                    'Storage claims and payments, location, product type, and daily wagon rent until the end date.'
+                    'طلب و پرداخت ذخیره، و سنجش کرایه ذخیره.',
+                    'Storage claims, payments, and storage rent assessment.'
                   )}
                 </p>
               </div>

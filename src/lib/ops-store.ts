@@ -1277,7 +1277,11 @@ export const useOpsStore = create<OpsState>()(
           purchaseOrders: p.purchaseOrders ?? [],
           purchaseInvoices: p.purchaseInvoices ?? [],
           companyPurchases: p.companyPurchases ?? [],
-          warehouseEntities: p.warehouseEntities ?? [],
+          warehouseEntities: (p.warehouseEntities ?? []).map((w) => ({
+            ...w,
+            capacityUnit: w.capacityUnit || 'تن',
+            port: w.port || w.location || '',
+          })),
           stockLots: (p.stockLots ?? []).map((l) => ({
             ...l,
             qtyOriginal: l.qtyOriginal ?? l.qty ?? 0,

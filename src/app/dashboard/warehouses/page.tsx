@@ -6,6 +6,8 @@ import { Eye, Plus, Warehouse as WarehouseIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -19,35 +21,87 @@ import { ExportButtons } from '@/components/shared/export-buttons';
 import { CompanySwitcher } from '@/components/layout/company-switcher';
 import { TableEmpty } from '@/components/shared/table-empty';
 import { CompactFormDialog } from '@/components/shared/compact-form-dialog';
-import { ExtraRow, MobileRecordCard, ResponsiveData } from '@/components/shared/mobile-record-card';
+import { ExtraRow, MobileRecordCard } from '@/components/shared/mobile-record-card';
 import { FlowLinks, PURCHASE_FLOW_STEPS } from '@/components/shared/flow-links';
 import { matchesCompany, useCompanyStore } from '@/lib/company-store';
+import {
+  portLabel,
+  portSelectOptions,
+  unitLabel,
+  unitSelectOptions,
+} from '@/lib/catalog-master';
 import { useOpsStore } from '@/lib/ops-store';
 import { useI18n } from '@/lib/i18n/store';
 import { formatNumber } from '@/lib/utils';
 import type { CompanyKey } from '@/lib/demo-data';
 
+const STORAGE_TYPES = [
+  { value: 'مواد ارتزاقی', en: 'Foodstuffs' },
+  { value: 'تیل', en: 'Oil / fuel' },
+  { value: 'گاز', en: 'Gas' },
+  { value: 'کود کیمیاوی', en: 'Chemical fertilizer' },
+  { value: 'مواد ساختمانی', en: 'Building materials' },
+  { value: 'فلزات', en: 'Metals' },
+] as const;
+
 export default function WarehousesPage() {
-  const { t, locale } = useI18n();
+  const { t, locale, tx } = useI18n();
   const { company } = useCompanyStore();
   const warehouses = useOpsStore((s) => s.warehouseEntities);
   const lots = useOpsStore((s) => s.stockLots);
   const addWarehouse = useOpsStore((s) => s.addWarehouse);
   const removeWarehouse = useOpsStore((s) => s.removeWarehouse);
   const [createOpen, setCreateOpen] = useState(false);
+  const [portFilter, setPortFilter] = useState('');
+  const [unitFilter, setUnitFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+
+  const unitOptions = useMemo(() => unitSelectOptions(locale), [locale]);
+  const portOptions = useMemo(() => portSelectOptions(locale), [locale]);
 
   const rows = useMemo(
     () => warehouses.filter((w) => matchesCompany(w.company, company)),
     [warehouses, company]
   );
 
-  const enriched = rows.map((w) => {
-    const whLots = lots.filter((l) => l.warehouseId === w.id);
-    const totalQty = whLots.reduce((s, l) => s + l.qty, 0);
-    const products = new Set(whLots.map((l) => l.productCode)).size;
-    const contracts = new Set(whLots.map((l) => l.contractId)).size;
-    return { ...w, totalQty, products, contracts, lotCount: whLots.length };
-  });
+  const enriched = useMemo(
+    () =>
+      rows.map((w) => {
+        const whLots = lots.filter((l) => l.warehouseId === w.id);
+        const totalQty = whLots.reduce((s, l) => s + l.qty, 0);
+        const products = new Set(whLots.map((l) => l.productCode)).size;
+        const contracts = new Set(whLots.map((l) => l.contractId)).size;
+        const stockUnits = [
+          ...new Set(whLots.map((l) => l.unit).filter(Boolean)),
+        ];
+        const capacityUnit = w.capacityUnit || stockUnits[0] || 'تن';
+        const port = w.port || w.location || '';
+        return {
+          ...w,
+          port,
+          capacityUnit,
+          totalQty,
+          products,
+          contracts,
+          lotCount: whLots.length,
+          stockUnits,
+        };
+      }),
+    [rows, lots]
+  );
+
+  const filtered = useMemo(() => {
+    return enriched.filter((w) => {
+      if (portFilter && w.port !== portFilter && w.location !== portFilter) return false;
+      if (unitFilter && w.capacityUnit !== unitFilter && !w.stockUnits.includes(unitFilter))
+        return false;
+      if (typeFilter && w.type !== typeFilter) return false;
+      return true;
+    });
+  }, [enriched, portFilter, unitFilter, typeFilter]);
+
+  const formatCapacity = (qty: number, unit: string) =>
+    `${formatNumber(qty, 0)} ${unitLabel(unit, locale)}`;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -62,8 +116,8 @@ export default function WarehousesPage() {
         title={t('pageWarehouses')}
         description={
           locale === 'en'
-            ? 'Each storage has a goods ledger (unload/load) and a cash ledger (payments and storage rent assessment).'
-            : 'هر ذخیره دو حساب دارد: جنسی (تخلیه و بارگیری) و نقدی (پرداخت و سنجش کرایه ذخیره).'
+            ? 'Capacity always has a unit (ton, carton, bag…). Filter by port and unit.'
+            : 'ظرفیت همیشه با واحد است (تن، کارتن، خریطه…). فیلتر بندر و واحد جداگانه.'
         }
         actions={
           <>
@@ -72,12 +126,16 @@ export default function WarehousesPage() {
               title={t('pageWarehouses')}
               columns={[
                 { key: 'name', label: locale === 'en' ? 'Name' : 'نام' },
-                { key: 'location', label: locale === 'en' ? 'Location' : 'محل' },
-                { key: 'totalQty', label: locale === 'en' ? 'Total qty' : 'جمع موجودی' },
-                { key: 'contracts', label: locale === 'en' ? 'Contracts' : 'قراردادها' },
-                { key: 'products', label: locale === 'en' ? 'Products' : 'کالاها' },
+                { key: 'port', label: locale === 'en' ? 'Port' : 'بندر' },
+                { key: 'type', label: locale === 'en' ? 'Type' : 'نوع' },
+                { key: 'capacity', label: locale === 'en' ? 'Capacity' : 'ظرفیت' },
+                { key: 'capacityUnit', label: locale === 'en' ? 'Unit' : 'واحد' },
+                { key: 'totalQty', label: locale === 'en' ? 'Stock qty' : 'موجودی' },
               ]}
-              rows={enriched}
+              rows={filtered.map(({ stockUnits, ...rest }) => ({
+                ...rest,
+                stockUnits: stockUnits.join(' · '),
+              }))}
             />
             <CompanySwitcher />
             <Button onClick={() => setCreateOpen(true)}>
@@ -87,6 +145,44 @@ export default function WarehousesPage() {
           </>
         }
       />
+
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
+          <div>
+            <Label>{tx('فیلتر بندر', 'Filter by port')}</Label>
+            <Select value={portFilter} onChange={(e) => setPortFilter(e.target.value)}>
+              <option value="">{tx('همه بندرها', 'All ports')}</option>
+              {portOptions.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>{tx('فیلتر واحد', 'Filter by unit')}</Label>
+            <Select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
+              <option value="">{tx('همه واحدها', 'All units')}</option>
+              {unitOptions.map((u) => (
+                <option key={u.value} value={u.value}>
+                  {u.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>{tx('فیلتر نوع', 'Filter by type')}</Label>
+            <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">{tx('همه انواع', 'All types')}</option>
+              {STORAGE_TYPES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {locale === 'en' ? s.en : s.value}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card>
@@ -98,7 +194,7 @@ export default function WarehousesPage() {
               <p className="text-xs text-slate-500">
                 {locale === 'en' ? 'Storage sites' : 'تعداد ذخیره'}
               </p>
-              <p className="text-xl font-bold num">{enriched.length}</p>
+              <p className="text-xl font-bold num">{filtered.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -115,41 +211,100 @@ export default function WarehousesPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">
-              {locale === 'en' ? 'Total stock qty' : 'جمع موجودی'}
+              {locale === 'en' ? 'Units in use' : 'واحدهای فعال'}
             </p>
-            <p className="mt-1 text-xl font-bold num">
-              {formatNumber(
-                lots
-                  .filter((l) => matchesCompany(l.company, company))
-                  .reduce((s, l) => s + l.qty, 0),
-                0
-              )}
+            <p className="mt-1 text-sm font-bold leading-6">
+              {[
+                ...new Set(
+                  filtered.flatMap((w) => [w.capacityUnit, ...w.stockUnits].filter(Boolean))
+                ),
+              ]
+                .map((u) => unitLabel(u, locale))
+                .join(' · ') || '—'}
             </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Card grid — always visible */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {filtered.length === 0 ? (
+          <Card className="sm:col-span-2 xl:col-span-3">
+            <CardContent className="py-10 text-center text-sm text-slate-500">
+              {locale === 'en' ? 'No storage matches filters' : 'ذخیره‌ای با این فیلتر یافت نشد'}
+            </CardContent>
+          </Card>
+        ) : (
+          filtered.map((w) => (
+            <MobileRecordCard
+              key={`card-${w.id}`}
+              title={w.name}
+              subtitle={portLabel(w.port, locale) || w.location}
+              badge={<Badge variant="muted">{w.type || tx('ذخیره', 'Storage')}</Badge>}
+              metrics={[
+                {
+                  label: tx('ظرفیت', 'Capacity'),
+                  value: formatCapacity(w.capacity || 0, w.capacityUnit),
+                },
+                {
+                  label: tx('موجودی', 'Stock'),
+                  value:
+                    w.stockUnits.length > 1
+                      ? w.stockUnits
+                          .map((u) => {
+                            const q = lots
+                              .filter((l) => l.warehouseId === w.id && l.unit === u)
+                              .reduce((s, l) => s + l.qty, 0);
+                            return formatCapacity(q, u);
+                          })
+                          .join(' · ')
+                      : formatCapacity(w.totalQty, w.capacityUnit),
+                },
+              ]}
+              extra={
+                <>
+                  <ExtraRow label={tx('بندر', 'Port')} value={portLabel(w.port, locale) || '—'} />
+                  <ExtraRow
+                    label={tx('واحد ظرفیت', 'Capacity unit')}
+                    value={unitLabel(w.capacityUnit, locale)}
+                  />
+                  <ExtraRow label={t('colCompany')} value={w.company === 'arya' ? t('companyArya') : t('companyTurkmen')} />
+                </>
+              }
+              footer={
+                <Link href={`/dashboard/warehouses/${w.id}`}>
+                  <Button size="sm" variant="outline">
+                    {locale === 'en' ? 'Goods or cash' : 'جنسی یا نقدی'}
+                  </Button>
+                </Link>
+              }
+            />
+          ))
+        )}
+      </div>
+
       <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
         <div className="bg-emerald-700 px-4 py-3 text-center text-lg font-bold text-white">
-          {locale === 'en' ? 'Storage' : 'ذخایر'}
+          {locale === 'en' ? 'Storage list' : 'فهرست ذخایر'}
         </div>
-        <CardContent className="px-0 pb-4 pt-0 lg:pb-0">
-          <ResponsiveData
-            table={
-              <div className="table-scroll">
+        <CardContent className="px-0 pb-4 pt-0">
+          <div className="table-scroll">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{locale === 'en' ? 'No.' : 'شماره'}</TableHead>
                       <TableHead>{locale === 'en' ? 'Account' : 'طرف حساب'}</TableHead>
+                      <TableHead>{tx('بندر', 'Port')}</TableHead>
                       <TableHead>{locale === 'en' ? 'Type' : 'نوع'}</TableHead>
+                      <TableHead>{tx('ظرفیت', 'Capacity')}</TableHead>
+                      <TableHead>{tx('واحد', 'Unit')}</TableHead>
                       <TableHead className="text-center">{t('colActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {enriched.length === 0 ? (
+                    {filtered.length === 0 ? (
                       <TableEmpty
-                        colSpan={4}
+                        colSpan={7}
                         message={
                           locale === 'en'
                             ? 'No storage accounts yet — create one'
@@ -157,7 +312,7 @@ export default function WarehousesPage() {
                         }
                       />
                     ) : null}
-                    {enriched.map((w, i) => (
+                    {filtered.map((w, i) => (
                       <TableRow key={w.id}>
                         <TableCell className="num">{i + 1}</TableCell>
                         <TableCell>
@@ -168,9 +323,16 @@ export default function WarehousesPage() {
                             {w.name}
                           </Link>
                         </TableCell>
+                        <TableCell>{portLabel(w.port, locale) || '—'}</TableCell>
                         <TableCell>
-                          <Badge variant="muted">{w.type || (locale === 'en' ? 'Storage' : 'ذخیره')}</Badge>
+                          <Badge variant="muted">
+                            {w.type || (locale === 'en' ? 'Storage' : 'ذخیره')}
+                          </Badge>
                         </TableCell>
+                        <TableCell className="num font-semibold">
+                          {formatNumber(w.capacity || 0, 0)}
+                        </TableCell>
+                        <TableCell>{unitLabel(w.capacityUnit, locale)}</TableCell>
                         <TableCell>
                           <div className="flex justify-center gap-1">
                             <Link href={`/dashboard/warehouses/${w.id}`}>
@@ -191,37 +353,7 @@ export default function WarehousesPage() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
-            }
-            cards={
-              enriched.length === 0 ? (
-                <p className="py-10 text-center text-sm text-slate-500">
-                  {locale === 'en' ? 'No storage yet' : 'هنوز ذخیره‌ای ثبت نشده'}
-                </p>
-              ) : (
-                enriched.map((w) => (
-                  <MobileRecordCard
-                    key={w.id}
-                    title={w.name}
-                    subtitle={w.location}
-                    badge={<Badge variant="muted">{w.type || (locale === 'en' ? 'Storage' : 'ذخیره')}</Badge>}
-                    metrics={[
-                      { label: locale === 'en' ? 'Qty' : 'موجودی', value: formatNumber(w.totalQty, 0) },
-                      { label: locale === 'en' ? 'Contracts' : 'قرارداد', value: String(w.contracts) },
-                    ]}
-                    extra={<ExtraRow label={t('colCompany')} value={w.company} />}
-                    footer={
-                      <Link href={`/dashboard/warehouses/${w.id}`}>
-                        <Button size="sm" variant="outline">
-                          {locale === 'en' ? 'Goods or cash' : 'جنسی یا نقدی'}
-                        </Button>
-                      </Link>
-                    }
-                  />
-                ))
-              )
-            }
-          />
+          </div>
         </CardContent>
       </div>
 
@@ -231,26 +363,44 @@ export default function WarehousesPage() {
         title={locale === 'en' ? 'New storage' : 'ذخیره جدید'}
         size="lg"
         fields={[
-          { key: 'name', label: locale === 'en' ? 'Account name' : 'طرف حساب / نام ذخیره', required: true },
-          { key: 'location', label: locale === 'en' ? 'Location' : 'محل', required: true, placeholder: 'هرات / تورغندی' },
+          {
+            key: 'name',
+            label: locale === 'en' ? 'Account name' : 'طرف حساب / نام ذخیره',
+            required: true,
+          },
+          {
+            key: 'port',
+            label: tx('بندر', 'Port'),
+            type: 'select',
+            required: true,
+            options: portOptions,
+          },
+          {
+            key: 'location',
+            label: locale === 'en' ? 'Location detail' : 'محل دقیق',
+            placeholder: locale === 'en' ? 'Optional detail' : 'جزئیات اختیاری',
+          },
           {
             key: 'type',
             label: locale === 'en' ? 'Type' : 'نوع',
             type: 'select',
-            options: [
-              { value: 'مواد ارتزاقی', label: locale === 'en' ? 'Foodstuffs' : 'مواد ارتزاقی' },
-              { value: 'تیل', label: locale === 'en' ? 'Oil / fuel' : 'تیل' },
-              { value: 'گاز', label: locale === 'en' ? 'Gas' : 'گاز' },
-              {
-                value: 'کود کیمیاوی',
-                label: locale === 'en' ? 'Chemical fertilizer' : 'کود کیمیاوی',
-              },
-              {
-                value: 'مواد ساختمانی',
-                label: locale === 'en' ? 'Building materials' : 'مواد ساختمانی',
-              },
-              { value: 'فلزات', label: locale === 'en' ? 'Metals' : 'فلزات' },
-            ],
+            options: STORAGE_TYPES.map((s) => ({
+              value: s.value,
+              label: locale === 'en' ? s.en : s.value,
+            })),
+          },
+          {
+            key: 'capacity',
+            label: tx('ظرفیت', 'Capacity'),
+            type: 'number',
+            required: true,
+          },
+          {
+            key: 'capacityUnit',
+            label: tx('واحد ظرفیت', 'Capacity unit'),
+            type: 'select',
+            required: true,
+            options: unitOptions,
           },
           {
             key: 'company',
@@ -261,17 +411,26 @@ export default function WarehousesPage() {
               { value: 'turkmen', label: t('companyTurkmen') },
             ],
           },
-          { key: 'capacity', label: locale === 'en' ? 'Capacity' : 'ظرفیت', type: 'number' },
           { key: 'notes', label: t('colNotes') },
         ]}
+        initial={{
+          type: 'مواد ارتزاقی',
+          capacityUnit: 'تن',
+          port: 'تورغندی',
+          company: 'arya',
+          capacity: '',
+        }}
         submitLabel={t('save')}
         onSubmit={(v) => {
+          const port = v.port || 'تورغندی';
           addWarehouse({
             name: v.name.trim(),
-            location: v.location.trim(),
+            port,
+            location: (v.location || port).trim(),
             type: v.type || 'مواد ارتزاقی',
             company: (v.company as CompanyKey) || 'arya',
             capacity: Number(v.capacity || 0),
+            capacityUnit: v.capacityUnit || 'تن',
             notes: v.notes || '',
           });
         }}

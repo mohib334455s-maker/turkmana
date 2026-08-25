@@ -7,15 +7,27 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog } from '@/components/ui/dialog';
+import { notifyAdminChange } from '@/lib/activity-store';
 import { useI18n } from '@/lib/i18n/store';
 
 export type ActionField = {
   key: string;
   label: string;
   multiline?: boolean;
+  /** text (default) | number | date (ISO yyyy-mm-dd) */
+  type?: 'text' | 'number' | 'date';
 };
 
 type Row = Record<string, unknown>;
+
+export type ActivityMeta = {
+  module: string;
+  moduleFa: string;
+  moduleEn: string;
+  entityLabelFa: string;
+  entityLabelEn: string;
+  entityName: string;
+};
 
 export function RecordActions({
   row,
@@ -25,6 +37,7 @@ export function RecordActions({
   onSave,
   onDelete,
   layout = 'icons',
+  activity,
 }: {
   row: Row;
   fields: ActionField[];
@@ -33,8 +46,10 @@ export function RecordActions({
   onSave?: (next: Row) => void;
   onDelete?: () => void;
   layout?: 'icons' | 'buttons';
+  /** When set, create/update/delete is logged for admin notifications */
+  activity?: ActivityMeta;
 }) {
-  const { t } = useI18n();
+  const { t, tx } = useI18n();
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -45,6 +60,40 @@ export function RecordActions({
     for (const f of fields) next[f.key] = row[f.key] ?? '';
     setDraft(next);
     setEditOpen(true);
+  };
+
+  const saveEdit = () => {
+    onSave?.(draft);
+    if (activity) {
+      notifyAdminChange({
+        action: 'update',
+        module: activity.module,
+        moduleFa: activity.moduleFa,
+        moduleEn: activity.moduleEn,
+        entityLabelFa: activity.entityLabelFa,
+        entityLabelEn: activity.entityLabelEn,
+        entityName: String(draft[activity.entityName] ?? activity.entityName ?? title),
+        detailsFa: `ویرایش سند — تاریخ قابل تغییر توسط کاربر`,
+        detailsEn: `Document edited — date can be set by user`,
+      });
+    }
+    setEditOpen(false);
+  };
+
+  const confirmDelete = () => {
+    onDelete?.();
+    if (activity) {
+      notifyAdminChange({
+        action: 'delete',
+        module: activity.module,
+        moduleFa: activity.moduleFa,
+        moduleEn: activity.moduleEn,
+        entityLabelFa: activity.entityLabelFa,
+        entityLabelEn: activity.entityLabelEn,
+        entityName: String(row[activity.entityName] ?? activity.entityName ?? title),
+      });
+    }
+    setDeleteOpen(false);
   };
 
   return (
@@ -70,7 +119,7 @@ export function RecordActions({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center justify-end gap-0.5">
+        <div className="flex items-center justify-center gap-0.5">
           {detailHref ? (
             <a href={detailHref}>
               <Button size="icon" variant="ghost" title={t('details')}>
@@ -147,17 +196,16 @@ export function RecordActions({
             <Button variant="outline" onClick={() => setEditOpen(false)}>
               {t('cancel')}
             </Button>
-            <Button
-              onClick={() => {
-                onSave?.(draft);
-                setEditOpen(false);
-              }}
-            >
-              {t('save')}
-            </Button>
+            <Button onClick={saveEdit}>{t('save')}</Button>
           </>
         }
       >
+        <p className="mb-3 text-xs leading-5 text-slate-500">
+          {tx(
+            'تاریخ سند را می‌توانید به هر تاریخ دلخواه تغییر دهید.',
+            'You can set this document date to any date you need.'
+          )}
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           {fields.map((f) => (
             <div key={f.key} className={f.multiline ? 'sm:col-span-2' : undefined}>
@@ -171,6 +219,9 @@ export function RecordActions({
                 />
               ) : (
                 <Input
+                  type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}
+                  dir={f.type === 'date' || f.type === 'number' ? 'ltr' : undefined}
+                  className={f.type === 'date' || f.type === 'number' ? 'text-left' : undefined}
                   value={String(draft[f.key] ?? '')}
                   onChange={(e) =>
                     setDraft((prev) => ({ ...prev, [f.key]: e.target.value }))
@@ -193,19 +244,13 @@ export function RecordActions({
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>
               {t('cancel')}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                onDelete?.();
-                setDeleteOpen(false);
-              }}
-            >
+            <Button variant="destructive" onClick={confirmDelete}>
               {t('delete')}
             </Button>
           </>
         }
       >
-        <p className="text-sm text-slate-600">{t('sessionOnly')}</p>
+        <p className="text-sm text-slate-600">{t('confirmDelete')}</p>
       </Dialog>
     </>
   );

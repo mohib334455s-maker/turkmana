@@ -307,6 +307,14 @@ export default function JournalPage() {
                           <TableCell>
                             <RecordActions
                               title={tx('سند روزنامچه', 'Journal voucher')}
+                              activity={{
+                                module: 'journal',
+                                moduleFa: 'روزنامچه',
+                                moduleEn: 'Journal',
+                                entityLabelFa: 'سند',
+                                entityLabelEn: 'Voucher',
+                                entityName: 'number',
+                              }}
                               row={{
                                 number: row.number,
                                 dateJalali: row.dateJalali,
@@ -318,12 +326,12 @@ export default function JournalPage() {
                               }}
                               fields={[
                                 { key: 'number', label: tx('نمبر', 'Serial') },
-                                { key: 'dateJalali', label: tx('تاریخ', 'Date') },
+                                { key: 'dateJalali', label: tx('تاریخ شمسی (دلخواه)', 'Jalali date') },
                                 { key: 'giver', label: tx('دهنده', 'Giver') },
                                 { key: 'receiver', label: tx('گیرنده', 'Receiver') },
                                 { key: 'details', label: tx('تفصیلات', 'Details'), multiline: true },
-                                { key: 'amount', label: tx('مبلغ', 'Amount') },
-                                { key: 'qty', label: tx('مقدار', 'Qty') },
+                                { key: 'amount', label: tx('مبلغ', 'Amount'), type: 'number' },
+                                { key: 'qty', label: tx('مقدار', 'Qty'), type: 'number' },
                               ]}
                               onSave={(next) => {
                                 setList(

@@ -133,6 +133,8 @@ export type ForeignArrivalRecord = {
   number: string;
   dateJalali: string;
   dateGregorian?: string;
+  /** ISO yyyy-mm-dd for editable date picker */
+  dateIso?: string;
   product: string;
   supplier: string;
   supplierId: number;
@@ -151,6 +153,8 @@ export type ForeignArrivalRecord = {
   status: string;
   company: CompanyKey;
   notes: string;
+  /** Expense amounts keyed by column key (گمرک، ترانسپورت، … + custom) */
+  expenses?: Record<string, number>;
 };
 
 export const foreignArrivals: ForeignArrivalRecord[] = [];

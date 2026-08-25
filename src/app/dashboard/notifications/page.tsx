@@ -96,10 +96,7 @@ export default function NotificationsPage() {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title={t('notificationsTitle')}
-        description={tx(
-          'هر افزودن، ویرایش یا حذف توسط کاربران اینجا برای ادمین ثبت می‌شود.',
-          'Every create, edit or delete by users is logged here for the admin.'
-        )}
+        description={t('notificationsDesc')}
         actions={
           <>
             <ExportButtons
@@ -139,7 +136,12 @@ export default function NotificationsPage() {
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ModuleIcon icon={Bell} moduleKey="notifications" size="lg" />
             <p className="text-base font-semibold text-slate-800">{t('noNotifications')}</p>
-            <p className="max-w-md text-sm text-slate-500">{t('noDataHint')}</p>
+            <p className="max-w-lg text-sm leading-6 text-slate-500">
+              {tx(
+                'وقتی کاربری معامله‌ای ثبت، ویرایش یا حذف کند، نام او، نقش، بخش و زمان اینجا برای ادمین نشان داده می‌شود. از آیکن زنگوله در هدر هم می‌توانید وارد شوید.',
+                'When a user creates, edits or deletes a transaction, their name, role, module and time appear here for the admin. Open via the bell icon in the header.'
+              )}
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -176,6 +178,7 @@ export default function NotificationsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-semibold text-slate-900">{noteTitle(n, locale)}</p>
                       <Badge variant={meta.variant}>{meta.label}</Badge>
+                      <Badge variant="muted">{n.userName}</Badge>
                       {!n.read ? <Badge variant="info">{tx('جدید', 'New')}</Badge> : null}
                     </div>
                     <p className="mt-1 whitespace-pre-line text-sm text-slate-600">
@@ -183,6 +186,8 @@ export default function NotificationsPage() {
                     </p>
                     <p className="mt-2 text-xs text-slate-400 num">
                       {formatWhen(n.createdAt, locale)}
+                      {n.userEmail ? ` · ${n.userEmail}` : ''}
+                      {n.userRole ? ` · ${n.userRole}` : ''}
                     </p>
                   </div>
                 </CardContent>

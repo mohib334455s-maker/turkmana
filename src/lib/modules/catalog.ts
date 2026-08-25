@@ -65,12 +65,12 @@ function notesField(): FieldDef {
 
 export const modules = {
   purchaseOrders: {
-    title: 'سفارش خرید|Purchase orders',
-    description: 'مدیریت سفارش‌های خرید قبل از فاکتور و ورود کالا',
-    entityName: 'سفارش خرید|Purchase orders',
+    title: 'درخواست خرید|Purchase requests',
+    description: 'مدیریت درخواست‌های خرید قبل از بل و ورود کالا',
+    entityName: 'درخواست خرید|Purchase requests',
     statusMap: docStatus,
     fields: [
-      { key: 'code', label: 'شماره سفارش', required: true, list: true, search: true },
+      { key: 'code', label: 'شماره درخواست', required: true, list: true, search: true },
       { key: 'date', label: 'تاریخ|Date', type: 'date' as const, required: true, list: true },
       { key: 'supplier', label: 'تأمین‌کننده|Vendor', required: true, list: true, search: true },
       { key: 'product', label: 'کالا|Product', required: true, list: true },
@@ -88,13 +88,13 @@ export const modules = {
   },
 
   purchaseInvoices: {
-    title: 'فاکتور خرید|Purchase invoices',
-    description: 'ثبت و پیگیری فاکتورهای خرید از تأمین‌کنندگان',
-    entityName: 'فاکتور خرید|Purchase invoices',
+    title: 'بل خرید|Purchase bills',
+    description: 'ثبت و پیگیری بل‌های خرید از تأمین‌کنندگان',
+    entityName: 'بل خرید|Purchase bills',
     statusMap: docStatus,
     fields: [
-      { key: 'code', label: 'شماره فاکتور', required: true, list: true, search: true },
-      { key: 'poCode', label: 'سفارش مرتبط', list: true, search: true },
+      { key: 'code', label: 'شماره بل', required: true, list: true, search: true },
+      { key: 'poCode', label: 'درخواست مرتبط', list: true, search: true },
       { key: 'date', label: 'تاریخ|Date', type: 'date' as const, required: true, list: true },
       { key: 'supplier', label: 'تأمین‌کننده|Vendor', required: true, list: true, search: true },
       { key: 'product', label: 'کالا|Product', required: true, list: true },
@@ -126,7 +126,7 @@ export const modules = {
     statusMap: docStatus,
     fields: [
       { key: 'code', label: 'شماره برگشت', required: true, list: true, search: true },
-      { key: 'invoiceCode', label: 'فاکتور', list: true, search: true },
+      { key: 'invoiceCode', label: 'بل', list: true, search: true },
       { key: 'date', label: 'تاریخ|Date', type: 'date' as const, required: true, list: true },
       { key: 'supplier', label: 'تأمین‌کننده|Vendor', required: true, list: true },
       { key: 'product', label: 'کالا|Product', required: true, list: true },
@@ -141,12 +141,12 @@ export const modules = {
   },
 
   salesOrders: {
-    title: 'سفارش فروش|Sales orders',
-    description: 'سفارش‌های فروش مشتریان قبل از فاکتور و بارگیری',
-    entityName: 'سفارش فروش|Sales orders',
+    title: 'درخواست فروش|Sales requests',
+    description: 'درخواست‌های فروش مشتریان قبل از بل و بارگیری',
+    entityName: 'درخواست فروش|Sales requests',
     statusMap: docStatus,
     fields: [
-      { key: 'code', label: 'شماره سفارش', required: true, list: true, search: true },
+      { key: 'code', label: 'شماره درخواست', required: true, list: true, search: true },
       { key: 'date', label: 'تاریخ|Date', type: 'date' as const, required: true, list: true },
       { key: 'customer', label: 'مشتری|Customer', required: true, list: true, search: true },
       { key: 'product', label: 'کالا|Product', required: true, list: true },
@@ -162,13 +162,13 @@ export const modules = {
   },
 
   salesInvoices: {
-    title: 'فاکتور فروش|Sales invoices',
-    description: 'صدور و پیگیری فاکتورهای فروش',
-    entityName: 'فاکتور فروش|Sales invoices',
+    title: 'بل فروش|Sales bills',
+    description: 'صدور و پیگیری بل‌های فروش',
+    entityName: 'بل فروش|Sales bills',
     statusMap: docStatus,
     fields: [
-      { key: 'code', label: 'شماره فاکتور', required: true, list: true, search: true },
-      { key: 'soCode', label: 'سفارش', list: true, search: true },
+      { key: 'code', label: 'شماره بل', required: true, list: true, search: true },
+      { key: 'soCode', label: 'درخواست', list: true, search: true },
       { key: 'date', label: 'تاریخ|Date', type: 'date' as const, required: true, list: true },
       { key: 'customer', label: 'مشتری|Customer', required: true, list: true, search: true },
       { key: 'product', label: 'کالا|Product', required: true, list: true },
@@ -226,7 +226,7 @@ export const modules = {
     statusMap: docStatus,
     fields: [
       { key: 'code', label: 'شماره برگشت', required: true, list: true, search: true },
-      { key: 'invoiceCode', label: 'فاکتور', list: true, search: true },
+      { key: 'invoiceCode', label: 'بل', list: true, search: true },
       { key: 'date', label: 'تاریخ|Date', type: 'date' as const, required: true, list: true },
       { key: 'customer', label: 'مشتری|Customer', required: true, list: true },
       { key: 'product', label: 'کالا|Product', required: true, list: true },
@@ -464,7 +464,7 @@ export const modules = {
     fields: [
       { key: 'code', label: 'کد|Code', required: true, list: true, search: true },
       { key: 'customer', label: 'مشتری|Customer', required: true, list: true, search: true },
-      { key: 'invoiceCode', label: 'فاکتور', list: true, search: true },
+      { key: 'invoiceCode', label: 'بل', list: true, search: true },
       { key: 'date', label: 'تاریخ|Date', type: 'date' as const, list: true },
       { key: 'dueDate', label: 'سررسید', type: 'date' as const, list: true },
       { key: 'amount', label: 'مبلغ|Amount', type: 'number' as const, money: true, list: true },
@@ -490,7 +490,7 @@ export const modules = {
     fields: [
       { key: 'code', label: 'کد|Code', required: true, list: true, search: true },
       { key: 'supplier', label: 'تأمین‌کننده|Vendor', required: true, list: true, search: true },
-      { key: 'invoiceCode', label: 'فاکتور', list: true, search: true },
+      { key: 'invoiceCode', label: 'بل', list: true, search: true },
       { key: 'date', label: 'تاریخ|Date', type: 'date' as const, list: true },
       { key: 'dueDate', label: 'سررسید', type: 'date' as const, list: true },
       { key: 'amount', label: 'مبلغ|Amount', type: 'number' as const, money: true, list: true },
